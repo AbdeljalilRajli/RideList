@@ -3,10 +3,10 @@ import { CarProps } from "@/types";
 export async function fetchCars() {
     const headers = {
             'x-rapidapi-key': '4b95435855mshed1d000beb2fc07p12d43fjsn6a55c610d3e7',
-		    'x-rapidapi-host': 'cars-by-api-ninjas.p.rapidapi.com'
+		        'x-rapidapi-host': 'cars-by-api-ninjas.p.rapidapi.com'
     }
 
-    const response = await fetch('https://cars-by-api-ninjas.p.rapidapi.com/v1/cars?model=q3', {
+    const response = await fetch('https://cars-by-api-ninjas.p.rapidapi.com/v1/cars?model=corolla', {
         headers: headers,
     });
 
