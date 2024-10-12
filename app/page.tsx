@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Hero from "../components/Hero";
 import SearchBar from "@/components/SearchBar";
 import CustomFilter from "@/components/CustomFilter";
@@ -9,14 +8,18 @@ import CarCard from "@/components/CarCard";
 import AboutSection from "@/components/AboutSection";
 import { HoverEffect } from "@/components/HoverEffect";
 import { projects } from "@/components/CardHoverEffect";
+import { fuels, manufacturers, yearsOfProduction } from "@/constants";
 
-export default async function Home() {
-  const allCars = await fetchCars();
+export default async function Home({ searchParams }: { searchParams: any }) {
+  const allCars = await fetchCars({
+    manufacturer: searchParams.manufacturer || '',
+    year: searchParams.year || 2022,
+    fuel: searchParams.fuel || '',
+    limit: searchParams.limit || 10,
+    model: searchParams.model || '',
+  });
 
-  console.log(allCars);
-
-  const isDataEmpty =
-    !Array.isArray(allCars) || allCars.length < 1 || !allCars;
+  const isDataEmpty = !Array.isArray(allCars) || allCars.length < 1 || !allCars;
 
   return (
     <div className="overflow-hidden">
@@ -40,16 +43,16 @@ export default async function Home() {
           <SearchBar />
 
           <div className="home__filter-container">
-            <CustomFilter title="fuel" />
-            <CustomFilter title="year" />
+            <CustomFilter title="fuel" options={fuels} />
+            <CustomFilter title="year" options={yearsOfProduction} />
           </div>
         </div>
 
         {!isDataEmpty ? (
           <section>
             <div className="home__cars-wrapper">
-              {allCars?.map((car) => (
-                <CarCard car={car} />
+              {allCars?.map((car: any) => (
+                <CarCard key={car.id} car={car} />
               ))}
             </div>
           </section>
