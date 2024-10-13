@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchManufacturer from './SearchManufacturer';
 import Image from 'next/image';
+import { SearchBarProps } from '@/types';
 
 const SearchButton = ({ otherClasses }: { otherClasses: string }) => {
   return (
@@ -19,7 +20,7 @@ const SearchButton = ({ otherClasses }: { otherClasses: string }) => {
   );
 };
 
-const SearchBar = ({ setManufacturer, setModel }) => {
+const SearchBar = ({ setManuFacturer, setModel }: SearchBarProps) => {
   const [searchManufacturer, setSearchManufacturer] = useState('');
   const [searchModel, setSearchModel] = useState('');
   const router = useRouter();
@@ -33,7 +34,7 @@ const SearchBar = ({ setManufacturer, setModel }) => {
 
 
     setModel(searchModel)
-    setManufacturer(searchManufacturer)
+    setManuFacturer(searchManufacturer)
   }
 
   return (
@@ -58,7 +59,7 @@ const SearchBar = ({ setManufacturer, setModel }) => {
           name="model"
           value={searchModel}
           onChange={(e) => setSearchModel(e.target.value)}
-          placeholder="Tiguan"
+          placeholder="Tiguan..."
           className="searchbar__input"
         />
         <SearchButton otherClasses="sm:hidden" />

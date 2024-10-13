@@ -10,50 +10,48 @@ import CarCard from "@/components/CarCard";
 import AboutSection from "@/components/AboutSection";
 import { HoverEffect } from "@/components/HoverEffect";
 import { projects } from "@/components/CardHoverEffect";
-import { fuels, manufacturers, yearsOfProduction } from "@/constants";
+import { fuels, yearsOfProduction } from "@/constants";
 import ShowMore from "@/components/ShowMore";
+import { CarState } from "@/types/index";
 
 
 export default function Home() {
-  const [allCars, setAllCars] = useState([]);
+  const [allCars, setAllCars] = useState<CarState>([]);
   const [loading, setLoading] = useState(false);
 
   // search states
-  const [manufacturer, setManufacturer] = useState("");
+  const [manufacturer, setManuFacturer] = useState("");
   const [model, setModel] = useState("");
 
-  //filter states
+  // filter state
   const [fuel, setFuel] = useState("");
   const [year, setYear] = useState(2022);
 
-  //pagination states
+  // limit state
   const [limit, setLimit] = useState(10);
 
   const getCars = async () => {
     setLoading(true);
-
     try {
       const result = await fetchCars({
-        manufacturer: manufacturer || '',
+        manufacturer: manufacturer.toLowerCase() || "",
+        model: model.toLowerCase() || "",
+        fuel: fuel.toLowerCase() || "",
         year: year || 2022,
-        fuel: fuel || '',
         limit: limit || 10,
-        model: model || '',
       });
-  
+
       setAllCars(result);
-    } catch (error) {
-      console.log(error);
+    } catch {
+      console.error();
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     getCars();
-  }, [fuel, year, limit, manufacturer, model])
-
-  const isDataEmpty = !Array.isArray(allCars) || allCars.length < 1 || !allCars;
+  }, [fuel, year, limit, manufacturer, model]);
 
   return (
     <div className="overflow-hidden">
@@ -74,29 +72,31 @@ export default function Home() {
         </div>
 
         <div className="home__filters">
-          <SearchBar
-            setManufacturer={setManufacturer}
-            setModel={setModel}
-          />
-
+          <div className="z-50">
+            <SearchBar
+              setManuFacturer={setManuFacturer}
+              setModel={setModel}
+            />
+          </div>
+          
           <div className="home__filter-container">
-            <CustomFilter title="fuel" options={fuels} setFilter={setFuel} />
-            <CustomFilter title="year" options={yearsOfProduction} setFilter={setYear} />
+            <CustomFilter options={fuels} setFilter={setFuel} />
+            <CustomFilter options={yearsOfProduction} setFilter={setYear} />
           </div>
         </div>
 
         {allCars.length > 0 ? (
           <section>
             <div className="home__cars-wrapper">
-              {allCars?.map((car) => (
-                <CarCard car={car} />
+              {allCars?.map((car, index) => (
+                <CarCard key={`car-${index}`} car={car} />
               ))}
             </div>
 
             {loading && (
               <div className="mt-16 w-full flex-center">
                 <Image 
-                  src="/loader.svg"
+                  src="./loader.svg"
                   alt="loader"
                   width={50}
                   height={50}
@@ -112,10 +112,12 @@ export default function Home() {
             />
           </section>
         ) : (
-          <div className="home__error-container">
-            <h2 className="text-black text-xlfont-bold">Oops, no results</h2>
-            <p>{allCars?.message}</p>
-          </div>
+          !loading && (
+            <div className="home__error-container">
+              <h2 className="text-black text-xlfont-bold">Oops, no results</h2>
+              <p>{allCars?.message}</p>
+            </div>
+          )
         )}
       </div>
     </div>
