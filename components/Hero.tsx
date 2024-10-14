@@ -17,7 +17,7 @@ const Hero = () => {
         
         <CustomButton 
           title="Explore Cars"
-          containerStyles="bg-primary-blue text-white rounded-full mt-10"
+          containerStyles="bg-blue-900 [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))] text-white rounded-full mt-10"
           handleClick={handleScroll}
         />
       </div>

@@ -13,6 +13,7 @@ import { projects } from "@/components/CardHoverEffect";
 import { fuels, yearsOfProduction } from "@/constants";
 import ShowMore from "@/components/ShowMore";
 import { CarState } from "@/types/index";
+import { FeaturesCards } from "@/components/FeaturesCards";
 
 
 export default function Home() {
@@ -57,7 +58,7 @@ export default function Home() {
     <div className="overflow-hidden">
       <Hero />
 
-      <div className="mt-12 padding-x padding-y max-width" id="discover">
+      <div className="mt-32 padding-x padding-y max-width" id="discover">
         <div className="home__text-container">
           <h1 className="text-4xl font-extrabold">About Us</h1>
           <AboutSection />
@@ -120,6 +121,13 @@ export default function Home() {
           )
         )}
       </div>
+
+      <div className="mt-20 padding-x padding-y max-width" id="discover">
+        <div className="home__text-container">
+          <FeaturesCards />
+        </div>
+      </div>
+
     </div>
   );
 }
