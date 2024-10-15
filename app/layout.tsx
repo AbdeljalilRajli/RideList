@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import '@fortawesome/fontawesome-svg-core/styles.css'; // Import Font Awesome CSS
+
 
 export const metadata: Metadata = {
   title: "RideList",

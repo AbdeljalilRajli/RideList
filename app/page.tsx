@@ -14,6 +14,7 @@ import { fuels, yearsOfProduction } from "@/constants";
 import ShowMore from "@/components/ShowMore";
 import { CarState } from "@/types/index";
 import { FeaturesCards } from "@/components/FeaturesCards";
+import { NewsLetter } from "@/components/NewsLetter";
 
 
 export default function Home() {
@@ -29,7 +30,7 @@ export default function Home() {
   const [year, setYear] = useState(2022);
 
   // limit state
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(12);
 
   const getCars = async () => {
     setLoading(true);
@@ -39,7 +40,7 @@ export default function Home() {
         model: model.toLowerCase() || "",
         fuel: fuel.toLowerCase() || "",
         year: year || 2022,
-        limit: limit || 10,
+        limit: limit || 12,
       });
 
       setAllCars(result);
@@ -58,7 +59,7 @@ export default function Home() {
     <div className="overflow-hidden">
       <Hero />
 
-      <div className="mt-32 padding-x padding-y max-width" id="discover">
+      <div className="mt-15 padding-x padding-y max-width" id="discover">
         <div className="home__text-container">
           <h1 className="text-4xl font-extrabold">About Us</h1>
           <AboutSection />
@@ -66,7 +67,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-12 padding-x padding-y max-width" id="discover">
+      <div className="mt-12 padding-x padding-y max-width" id="fleet">
         <div className="home__text-container">
           <h1 className="text-4xl font-extrabold">Car Catalogue</h1>
           <p>Explore the cars you might like</p>
@@ -107,7 +108,7 @@ export default function Home() {
             )}
 
             <ShowMore 
-              pageNumber={limit / 10}
+              pageNumber={limit / 12}
               isNext={limit > allCars.length}
               setLimit={setLimit}
             />
@@ -122,9 +123,15 @@ export default function Home() {
         )}
       </div>
 
-      <div className="mt-20 padding-x padding-y max-width" id="discover">
+      <div className="mt-20 padding-x padding-y max-width" id="deals">
         <div className="home__text-container">
           <FeaturesCards />
+        </div>
+      </div>
+
+      <div className="mt-20 mb-10 padding-x padding-y max-width" id="contact">
+        <div className="home__text-container">
+          <NewsLetter />
         </div>
       </div>
 
