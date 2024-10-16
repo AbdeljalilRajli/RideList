@@ -28,14 +28,6 @@ Welcome to **RideList**, the ultimate platform for convenient, stress-free car r
 
 ---
 
-## 🖼️ Project Mockup
-
-Here's a glimpse of the user interface. You can find the complete mockup of the platform below:
-
-![RideList Mockup](./public/RideList-Mockup.jpg)
-
----
-
 ## 📂 Getting Started
 
 To get started with the project, follow these steps:
