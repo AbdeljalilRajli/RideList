@@ -59,7 +59,7 @@ export function FeaturesCards() {
           width={700}
           height={600}
           alt="car deals"
-          className="absolute -right-10 md:-right-[40%] lg:-right-[5%] lg:-bottom-20 object-contain rounded-2xl"
+          className="absolute -right-10 md:-right-[10%] lg:-right-[5%] lg:-bottom-20 md:-bottom-14 object-contain rounded-2xl"
         />
       </WobbleCard>
     </div>

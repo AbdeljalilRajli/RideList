@@ -32,7 +32,7 @@ export function NewsLetter() {
           />
           <CustomButton 
             title="Subscribe"
-            containerStyles="bg-indigo-800 text-white rounded-lg px-4 py-2"
+            containerStyles="bg-blue-900 [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))] rounded-full text-white"
             handleClick={handleSubscribe}
           />
         </div>

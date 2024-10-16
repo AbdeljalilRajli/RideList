@@ -59,7 +59,7 @@ export default function Home() {
     <div className="overflow-hidden">
       <Hero />
 
-      <div className="mt-15 padding-x padding-y max-width" id="discover">
+      <div className="mt-20 lg:mt-16 padding-x padding-y max-width" id="discover">
         <div className="home__text-container">
           <h1 className="text-4xl font-extrabold">About Us</h1>
           <AboutSection />

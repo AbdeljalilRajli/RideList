@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -8,7 +7,7 @@ import { FlipWords } from "./ui/FlipWords";
 
 const Hero = () => {
 
-  const words = ["fast", "comfortable", "luxurious", "economical"];
+  const words = ["Fast", "Comfy", "Luxe", "Cheap"];
 
   const handleScroll = () => {}
 
@@ -34,7 +33,8 @@ const Hero = () => {
 
       </div>
 
-      <div className="hero__image-container">
+      {/* Tailwind classes directly */}
+      <div className="hidden sm:flex xl:flex-[1.5] justify-end items-end w-full xl:h-screen">
         <div className="hero__image">
           <Image src="/hero.webp" alt="hero" fill className="object-contain" />
         </div>
@@ -45,4 +45,4 @@ const Hero = () => {
   )
 }
 
-export default Hero
+export default Hero;

@@ -18,7 +18,7 @@ const CarDetails = ({ isOpen, closeModal, car }: CarDetailsProps) => {
   return (
     <>
         <Transition appear show={isOpen} as={Fragment}>
-            <Dialog as='div' className="relative z-10" onClose={closeModal}>
+            <Dialog as='div' className="relative z-50" onClose={closeModal}>
                 <Transition.Child
                     as={Fragment}
                     enter='ease-out duration-300'
@@ -75,16 +75,16 @@ const CarDetails = ({ isOpen, closeModal, car }: CarDetailsProps) => {
                                     </div>
                                 </div>
 
-                                <div className='flex-1 flex flex-col gap-2'>
+                                <div className='flex-1 flex flex-col gap-4 mt-4'>
                                     <h2 className='font-semibold text-xl capitalize'>
                                         {car.make} {car.model}
                                     </h2>
 
                                     <div className='mt-3 flex flex-wrap gap-4'>
                                         {Object.entries(car).map(([key, value]) => (
-                                            <div className='flex justify-between gap-5 w-full text-right' key={key}>
+                                            <div className='flex justify-between gap-5 w-full text-right border-b border-gray-300 pb-2' key={key}>
                                                 <h4 className='text-gray capitalize'>{key.split("_").join(" ")}</h4>
-                                                <p className='text-black-100 font-semibold'>{value}</p>
+                                                <p className='text-indigo-800 font-semibold'>{value}</p>
                                             </div>
                                         ))}
                                     </div>

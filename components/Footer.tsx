@@ -52,14 +52,13 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-center border-t border-gray-200 py-6 px-6 max-w-6xl mx-auto">
-        <p className="text-sm text-gray-600">@2024 RideList. All rights reserved</p>
-
+      <div className="flex flex-col md:flex-row justify-between items-center border-t border-gray-200 py-6 px-6 max-w-6xl mx-auto bg-indigo-800 rounded-t-3xl [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))]">
+        <p className="text-sm text-white">@2024 RideList. All rights reserved</p>
         <div className="flex gap-6">
-          <Link href="/" className="text-gray-500 hover:text-indigo-800 transition duration-200">
+          <Link href="/" className="text-white hover:text-indigo-800 transition duration-200">
             Privacy & Policy
           </Link>
-          <Link href="/" className="text-gray-500 hover:text-indigo-800 transition duration-200">
+          <Link href="/" className="text-white hover:text-indigo-800 transition duration-200">
             Terms & Condition
           </Link>
         </div>
