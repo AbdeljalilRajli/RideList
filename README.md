@@ -51,9 +51,8 @@ npm run dev
 
 ## 🚧 Future Enhancements
 
-- Integration with payment gateways for car bookings.
 - User account management with secure login.
-- Adding AI-driven car recommendations based on user preferences.
+- Integration with payment gateways for car bookings.
 
 
 
