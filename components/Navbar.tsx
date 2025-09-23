@@ -12,6 +12,7 @@ const Navbar = () => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { user, userData, logout } = useAuth();
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -35,6 +36,22 @@ const Navbar = () => {
     };
   }, []);
 
+  // Handle scroll for glassy navbar effect on homepage
+  useEffect(() => {
+    if (!isHomepage) {
+      setIsScrolled(false);
+      return;
+    }
+
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isHomepage]);
+
   const smoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
     const targetElement = document.getElementById(targetId);
@@ -54,7 +71,7 @@ const Navbar = () => {
   return (
     <header className={`w-full fixed top-0 z-50 transition-all duration-300 ${
       isHomepage 
-        ? 'bg-transparent' 
+        ? (isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm' : 'bg-transparent')
         : 'bg-white shadow-sm'
     }`}>
       <nav className="max-w-[1440px] mx-auto flex justify-between items-center sm:px-16 px-6 py-4">
@@ -86,8 +103,8 @@ const Navbar = () => {
                 <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200 py-2 z-[100]">
                   {/* User Info Header */}
                   <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{user.displayName || 'User'}</p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{user.displayName || 'User'}</p>
+                    <p className="text-xs text-gray-500 break-all leading-relaxed">{user.email}</p>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${
                       userData?.role === 'admin' 
                         ? 'bg-purple-100 text-purple-800' 
@@ -205,8 +222,8 @@ const Navbar = () => {
               <div className="absolute right-0 mt-2 w-64 sm:w-56 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200 py-2 z-[100]">
                 {/* User Info Header */}
                 <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-900">{user.displayName || 'User'}</p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{user.displayName || 'User'}</p>
+                  <p className="text-xs text-gray-500 break-all leading-relaxed">{user.email}</p>
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${
                     userData?.role === 'admin' 
                       ? 'bg-purple-100 text-purple-800' 
