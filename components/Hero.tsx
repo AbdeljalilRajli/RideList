@@ -21,7 +21,7 @@ const Hero = () => {
 
   return (
     <div className="hero">
-      <div className="flex-1 lg:pt-56 md:pt-36 pt-36 padding-x">
+      <div className="flex-1 lg:pt-72 md:pt-52 pt-48 padding-x">
         <h1 className="hero__title">
           Book, or Rent a Car That’s
           <FlipWords words={words} /> <br />

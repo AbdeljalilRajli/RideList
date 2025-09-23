@@ -82,7 +82,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="overflow-hidden pt-20">
+    <main className="overflow-hidden">
       <Hero />
 
       <div className="mt-20 lg:mt-16 padding-x padding-y max-width" id="discover">

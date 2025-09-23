@@ -229,11 +229,11 @@ export default function CarDetailPage() {
               {/* Features Grid */}
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Specifications</h2>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   {features.map((feature, index) => (
-                    <div key={index} className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-gray-600">{feature.label}</span>
-                      <span className="font-medium text-gray-900">{feature.value}</span>
+                    <div key={index} className="flex justify-between items-center py-3 px-4 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600 text-sm font-medium">{feature.label}</span>
+                      <span className="font-semibold text-gray-900 text-sm">{feature.value}</span>
                     </div>
                   ))}
                 </div>
