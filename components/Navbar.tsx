@@ -41,7 +41,7 @@ const Navbar = () => {
         {/* Main navigation */}
         <div className={`flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 ${isNavOpen ? 'block' : 'hidden'} sm:block absolute sm:static bg-white sm:bg-transparent w-full sm:w-auto top-full left-0 shadow-lg sm:shadow-none p-6 rounded-lg transition-all duration-300 ease-in-out`}>
           <a href="#discover" className="text-gray-700 hover:text-indigo-800" onClick={(e) => smoothScroll(e, "discover")}>About</a>
-          <a href="#fleet" className="text-gray-700 hover:text-indigo-800" onClick={(e) => smoothScroll(e, "fleet")}>Fleet</a>
+          <Link href="/fleet" className="text-gray-700 hover:text-indigo-800">Fleet</Link>
           <a href="#deals" className="text-gray-700 hover:text-indigo-800" onClick={(e) => smoothScroll(e, "deals")}>Deals</a>
           <a href="#contact" className="text-gray-700 hover:text-indigo-800" onClick={(e) => smoothScroll(e, "contact")}>Contact</a>
         </div>
@@ -49,7 +49,7 @@ const Navbar = () => {
         <CustomButton 
           title="Sign In"
           btnType="button"
-          containerStyles="text-white bg-blue-900 [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))] sm:bg-blue-900 sm:text-white lg:bg-white lg:text-indigo-800 rounded-full min-w-[100px]"
+          containerStyles="bg-blue-900 [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))] rounded-full text-white"
         />
       </nav>
     </header>

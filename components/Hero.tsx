@@ -9,7 +9,15 @@ const Hero = () => {
 
   const words = ["Fast", "Comfy", "Luxe", "Cheap"];
 
-  const handleScroll = () => {}
+  const handleScroll = () => {
+    const targetElement = document.getElementById("fleet");
+    if (targetElement) {
+      targetElement.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }
 
   return (
     <div className="hero">
@@ -27,7 +35,7 @@ const Hero = () => {
         
         <CustomButton 
           title="Explore Cars"
-          containerStyles="bg-blue-900 [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))] text-white rounded-full mt-8"
+          containerStyles="bg-blue-900 [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))] rounded-full text-white"
           handleClick={handleScroll}
         />
 

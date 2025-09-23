@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom primary color */
+:root {
+  --primary-blue: #3730a3;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -38,6 +43,26 @@ html {
 
 .custom-btn {
   @apply flex flex-row relative justify-center items-center py-3 px-6 outline-none;
+}
+
+/* Modern gradient button style */
+.gradient-btn {
+  background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #3730a3 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+  box-shadow: 0 4px 15px rgba(55, 48, 163, 0.4);
+  transition: all 0.3s ease;
+}
+
+.gradient-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(55, 48, 163, 0.6);
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 /* END: General styles */
 

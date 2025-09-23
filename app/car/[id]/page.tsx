@@ -59,48 +59,95 @@ export default function CarDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
-      {/* Breadcrumb Section */}
-      <div className="bg-gray-50 border-b border-gray-200">
-        <div className="max-width padding-x py-6">
-          {/* Breadcrumb Navigation */}
-          <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
-            <Link href="/" className="hover:text-gray-700">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-100 pt-20">
+      {/* Modern Hero Section */}
+      <div className="relative bg-gradient-to-r from-white via-blue-50/30 to-white overflow-hidden">
+        {/* Decorative Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-100/40 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-16 -left-24 w-64 h-64 bg-indigo-100/30 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative max-width padding-x py-12">
+          {/* Enhanced Breadcrumb */}
+          <div className="bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 mb-8 inline-flex items-center space-x-3 shadow-sm border border-gray-100">
+            <Link href="/" className="text-gray-600 hover:text-primary-blue transition-colors font-medium">
               Home
             </Link>
-            <span>›</span>
-            <Link href="/fleet" className="hover:text-gray-700">
+            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+            <Link href="/fleet" className="text-gray-600 hover:text-primary-blue transition-colors font-medium">
               Fleet
             </Link>
-            <span>›</span>
-            <span className="text-gray-900 font-medium">
+            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+            <span className="text-gray-900 font-semibold">
               {car.make} {car.model}
             </span>
-          </nav>
+          </div>
           
-          {/* Page Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {car.make} {car.model}
-              </h1>
-              <p className="text-lg text-gray-600 mt-1">
-                {car.year} • {car.class} • {car.color}
-              </p>
+          {/* Enhanced Header */}
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                    {car.year}
+                  </span>
+                  <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">
+                    {car.class}
+                  </span>
+                </div>
+                <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight">
+                  {car.make} <span className="text-primary-blue">{car.model}</span>
+                </h1>
+                <p className="text-xl text-gray-600 leading-relaxed max-w-2xl">
+                  Experience premium {car.fuel_type === 'electricity' ? 'electric' : car.fuel_type === 'hybrid' ? 'hybrid' : 'performance'} driving with this exceptional {car.class.toLowerCase()}
+                </p>
+              </div>
+              
+              {/* Feature Highlights */}
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-100">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-gray-700">{car.fuel_type.charAt(0).toUpperCase() + car.fuel_type.slice(1)}</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-100">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-gray-700">{car.seats} Seats</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-100">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-gray-700">{car.transmission === 'a' ? 'Automatic' : 'Manual'}</span>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Starting from</p>
-              <p className="text-3xl font-bold text-gray-900">${car.price_per_day}/day</p>
+            
+            {/* Price Card */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100 min-w-[280px]">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-gray-600 font-medium">Starting from</p>
+                <div className="flex items-baseline justify-center space-x-1">
+                  <span className="text-4xl font-bold text-gray-900">${car.price_per_day}</span>
+                  <span className="text-lg text-gray-600 font-medium">/day</span>
+                </div>
+                <p className="text-xs text-gray-500">Includes insurance & roadside assistance</p>
+              </div>
             </div>
           </div>
+        </div>
+        
+        {/* Bottom Wave */}
+        <div className="absolute bottom-0 left-0 w-full overflow-hidden">
+          <svg className="relative block w-full h-8" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" className="fill-gray-50"></path>
+          </svg>
         </div>
       </div>
 
       <div className="max-width padding-x py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Image Gallery */}
+          {/* Modern Image Gallery */}
           <div>
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
               <div className="relative h-96 bg-gray-100">
                 <Image
                   src={carImages[currentImageIndex]}
@@ -132,9 +179,9 @@ export default function CarDetailPage() {
             </div>
           </div>
 
-          {/* Car Details */}
+          {/* Modern Car Details */}
           <div>
-            <div className="bg-white rounded-lg shadow-sm p-8">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-8">
 
               {/* Key Stats */}
               <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-gray-50 rounded-lg">
