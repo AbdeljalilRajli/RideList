@@ -218,7 +218,7 @@ export default function FleetPage() {
 
               <div className="space-y-8">
                 {/* Manufacturer Filter */}
-                <div className="relative z-50">
+                <div className="relative z-[60]">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Manufacturer
                   </label>
@@ -230,7 +230,7 @@ export default function FleetPage() {
 
                 {/* Model Filter - Updated to use dropdown */}
                 {manufacturer && (
-                  <div className="relative z-40">
+                  <div className="relative z-[55]">
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Model
                     </label>
@@ -252,7 +252,7 @@ export default function FleetPage() {
                 )}
 
                 {/* Fuel Type */}
-                <div className="relative z-30">
+                <div className="relative z-50">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Fuel Type
                   </label>
@@ -260,7 +260,7 @@ export default function FleetPage() {
                 </div>
 
                 {/* Year */}
-                <div className="relative z-20">
+                <div className="relative z-40">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Year
                   </label>
@@ -268,7 +268,7 @@ export default function FleetPage() {
                 </div>
 
                 {/* Transmission */}
-                <div className="relative z-10">
+                <div className="relative z-30">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Transmission
                   </label>
@@ -276,7 +276,7 @@ export default function FleetPage() {
                 </div>
 
                 {/* Price Range */}
-                <div className="relative z-10">
+                <div className="relative z-20">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Price Range
                   </label>
