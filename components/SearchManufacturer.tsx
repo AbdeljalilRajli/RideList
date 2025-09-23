@@ -21,11 +21,11 @@ const SearchManufacturer = ({  selected, setSelected}:
         ));
   
         return (
-            <div className='search-manufacturer'>
+            <div className='w-full'>
               <Combobox value={selected} onChange={setSelected}>
                 <div className='relative w-full'>
                   {/* Button for the combobox. Click on the icon to see the complete dropdown */}
-                  <Combobox.Button className='absolute top-[14px]'>
+                  <Combobox.Button className='absolute top-[14px] z-10'>
                     <Image
                       src='/car-logo.svg'
                       width={20}
@@ -37,10 +37,10 @@ const SearchManufacturer = ({  selected, setSelected}:
         
                   {/* Input field for searching */}
                   <Combobox.Input
-                    className='search-manufacturer__input'
+                    className='w-full px-4 py-3 pl-12 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900'
                     displayValue={(item: string) => item}
                     onChange={(event) => setQuery(event.target.value)} // Update the search query when the input changes
-                    placeholder='Volkswagen...'
+                    placeholder='Select manufacturer...'
                   />
         
                   {/* Transition for displaying the options */}
@@ -51,12 +51,12 @@ const SearchManufacturer = ({  selected, setSelected}:
                     leaveTo='opacity-0'
                     afterLeave={() => setQuery("")} // Reset the search query after the transition completes
                   >
-                    <Combobox.Options className='search-manufacturer__options' static>
+                    <Combobox.Options className='absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm' static>
                       {/* If there are no filtered manufacturers and the query is not empty, show an option to create a new manufacturer */}
                       {filteredManufacturers.length === 0 && query !== "" ? (
                         <Combobox.Option
                           value={query}
-                          className='search-manufacturer__option'
+                          className='cursor-default select-none py-2 pl-10 pr-4'
                         >
                           Create "{query}"
                         </Combobox.Option>
@@ -66,8 +66,8 @@ const SearchManufacturer = ({  selected, setSelected}:
                           <Combobox.Option
                             key={item}
                             className={({ active }) =>
-                              `relative search-manufacturer__option ${
-                                active ? "bg-indigo-800 text-white" : "text-gray-900"
+                              `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                active ? "bg-blue-900 text-white" : "text-gray-900"
                               }`
                             }
                             value={item}
@@ -89,7 +89,7 @@ const SearchManufacturer = ({  selected, setSelected}:
                                     className={`absolute inset-y-0 left-0 flex items-center pl-3 ${
                                       active
                                         ? "text-white"
-                                        : "text-pribg-primary-purple"
+                                        : "text-blue-900"
                                     }`}
                                   ></span>
                                 ) : null}

@@ -14,7 +14,7 @@ export default function CustomFilter<T>({
   const [menu, setMenu] = useState(options[0]); // State for storing the selected option
 
   return (
-    <div className='w-fit'>
+    <div className='w-full'>
       <Listbox
         value={menu}
         onChange={(e) => {
@@ -22,7 +22,7 @@ export default function CustomFilter<T>({
           setFilter(e.value as unknown as T); // Update the selected option in state
         }}
       >
-        <div className='relative w-fit z-10'>
+        <div className='relative w-full z-10'>
           {/* Button for the listbox */}
           <Listbox.Button className='custom-filter__btn'>
             <span className='block truncate'>{menu.title}</span>
@@ -48,7 +48,7 @@ export default function CustomFilter<T>({
                   key={option.title}
                   className={({ active }) =>
                     `relative cursor-default select-none py-2 px-4 ${
-                      active ? "bg-primary-blue text-white" : "text-gray-900"
+                      active ? "bg-blue-900 text-white" : "text-gray-900"
                     }`
                   }
                   value={option}

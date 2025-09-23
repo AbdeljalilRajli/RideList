@@ -2,23 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Hero from "../components/Hero";
 import SearchBar from "@/components/SearchBar";
 import CustomFilter from "@/components/CustomFilter";
-import { fetchCars } from "@/utils";
 import CarCard from "@/components/CarCard";
 import AboutSection from "@/components/AboutSection";
 import { HoverEffect } from "@/components/HoverEffect";
 import { projects } from "@/components/CardHoverEffect";
-import { fuels, yearsOfProduction } from "@/constants";
+import { fuels, yearsOfProduction, cars } from "@/constants";
 import ShowMore from "@/components/ShowMore";
-import { CarState } from "@/types/index";
+import { CarProps } from "@/types/index";
 import { FeaturesCards } from "@/components/FeaturesCards";
 import { NewsLetter } from "@/components/NewsLetter";
 
 
 export default function Home() {
-  const [allCars, setAllCars] = useState<CarState>([]);
+  const [allCars, setAllCars] = useState<CarProps[]>([]);
+  const [filteredCars, setFilteredCars] = useState<CarProps[]>([]);
   const [loading, setLoading] = useState(false);
 
   // search states
@@ -27,36 +28,61 @@ export default function Home() {
 
   // filter state
   const [fuel, setFuel] = useState("");
-  const [year, setYear] = useState(2022);
+  const [year, setYear] = useState(0);
 
   // limit state
   const [limit, setLimit] = useState(12);
 
-  const getCars = async () => {
+  const filterCars = () => {
     setLoading(true);
-    try {
-      const result = await fetchCars({
-        manufacturer: manufacturer.toLowerCase() || "",
-        model: model.toLowerCase() || "",
-        fuel: fuel.toLowerCase() || "",
-        year: year || 2022,
-        limit: limit || 12,
-      });
-
-      setAllCars(result);
-    } catch {
-      console.error();
-    } finally {
-      setLoading(false);
+    
+    let filtered = cars;
+    
+    // Filter by manufacturer
+    if (manufacturer) {
+      filtered = filtered.filter(car => 
+        car.make.toLowerCase().includes(manufacturer.toLowerCase())
+      );
     }
+    
+    // Filter by model
+    if (model) {
+      filtered = filtered.filter(car => 
+        car.model.toLowerCase().includes(model.toLowerCase())
+      );
+    }
+    
+    // Filter by fuel type
+    if (fuel) {
+      filtered = filtered.filter(car => 
+        car.fuel_type.toLowerCase() === fuel.toLowerCase()
+      );
+    }
+    
+    // Filter by year
+    if (year && year > 0) {
+      filtered = filtered.filter(car => car.year === year);
+    }
+    
+    // Apply limit
+    const limitedCars = filtered.slice(0, limit);
+    
+    setFilteredCars(limitedCars);
+    setAllCars(cars);
+    setLoading(false);
   };
 
   useEffect(() => {
-    getCars();
+    filterCars();
   }, [fuel, year, limit, manufacturer, model]);
+  
+  useEffect(() => {
+    setAllCars(cars);
+    setFilteredCars(cars.slice(0, limit));
+  }, []);
 
   return (
-    <div className="overflow-hidden">
+    <main className="overflow-hidden pt-20">
       <Hero />
 
       <div className="mt-20 lg:mt-16 padding-x padding-y max-width" id="discover">
@@ -73,54 +99,22 @@ export default function Home() {
           <p>Explore the cars you might like</p>
         </div>
 
-        <div className="home__filters">
-          <div className="z-50">
-            <SearchBar
-              setManuFacturer={setManuFacturer}
-              setModel={setModel}
-            />
+        {/* Featured Cars Preview */}
+        <div className="mt-8">
+          <div className="home__cars-wrapper">
+            {cars.slice(0, 8).map((car, index) => (
+              <CarCard key={`featured-car-${index}`} car={car} index={index} />
+            ))}
           </div>
           
-          <div className="home__filter-container">
-            <CustomFilter options={fuels} setFilter={setFuel} />
-            <CustomFilter options={yearsOfProduction} setFilter={setYear} />
+          <div className="flex justify-center mt-8">
+            <Link href="/fleet">
+              <button className="w-fit py-[16px] px-8 rounded-full bg-blue-900 text-white text-[14px] leading-[17px] font-bold hover:bg-blue-800 transition-colors [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))]">
+                View All Cars
+              </button>
+            </Link>
           </div>
         </div>
-
-        {allCars.length > 0 ? (
-          <section>
-            <div className="home__cars-wrapper">
-              {allCars?.map((car, index) => (
-                <CarCard key={`car-${index}`} car={car} />
-              ))}
-            </div>
-
-            {loading && (
-              <div className="mt-16 w-full flex-center">
-                <Image 
-                  src="./loader.svg"
-                  alt="loader"
-                  width={50}
-                  height={50}
-                  className="object-contain"
-                />
-              </div>
-            )}
-
-            <ShowMore 
-              pageNumber={limit / 12}
-              isNext={limit > allCars.length}
-              setLimit={setLimit}
-            />
-          </section>
-        ) : (
-          !loading && (
-            <div className="home__error-container">
-              <h2 className="text-black text-xlfont-bold">Oops, no results</h2>
-              <p>{allCars?.message}</p>
-            </div>
-          )
-        )}
       </div>
 
       <div className="mt-20 padding-x padding-y max-width" id="deals">
@@ -135,6 +129,6 @@ export default function Home() {
         </div>
       </div>
 
-    </div>
+    </main>
   );
 }
