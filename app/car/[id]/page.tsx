@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
 import { cars } from "@/constants";
 import { CarProps } from "@/types";
+import Image from "next/image";
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import { notFound } from "next/navigation";
+import BookingForm from "@/components/BookingForm";
 import { getCarImage } from "@/lib/utils";
 import { calculateCarRent } from "@/utils";
+import { useParams } from "next/navigation";
 
 export default function CarDetailPage() {
   const params = useParams();
   const [car, setCar] = useState<CarProps | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -238,8 +241,11 @@ export default function CarDetailPage() {
 
               {/* Action Buttons */}
               <div className="space-y-4">
-                <button className="w-full py-[16px] px-6 rounded-full bg-blue-900 text-white text-[14px] leading-[17px] font-bold hover:bg-blue-800 transition-colors [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))]">
-                  Reserve Now - ${car.price_per_day}/day
+                <button 
+                  onClick={() => setIsBookingFormOpen(true)}
+                  className="w-full py-[16px] px-6 rounded-full bg-blue-900 text-white text-[14px] leading-[17px] font-bold hover:bg-blue-800 transition-colors [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))]"
+                >
+                  Book Now - ${car.price_per_day}/day
                 </button>
                 <button className="w-full py-[16px] px-6 rounded-full border border-gray-300 text-gray-700 text-[14px] leading-[17px] font-bold hover:bg-gray-50 transition-colors">
                   Contact for Details
@@ -278,6 +284,13 @@ export default function CarDetailPage() {
           </div>
         </div>
       </div>
+      
+      {/* Booking Form Modal */}
+      <BookingForm 
+        car={car}
+        isOpen={isBookingFormOpen}
+        onClose={() => setIsBookingFormOpen(false)}
+      />
     </div>
   );
 }
