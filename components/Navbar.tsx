@@ -52,15 +52,58 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHomepage]);
 
-  const smoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+  // Handle hash navigation when page loads
+  useEffect(() => {
+    if (isHomepage && window.location.hash) {
+      const targetId = window.location.hash.substring(1);
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        // Immediately set navbar style based on target element position
+        const elementTop = targetElement.offsetTop;
+        if (elementTop > 50) {
+          setIsScrolled(true);
+        }
+        
+        setTimeout(() => {
+          targetElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 100);
+      }
+    }
+  }, [isHomepage]);
+
+  // Check initial scroll position when component mounts on homepage
+  useEffect(() => {
+    if (isHomepage) {
+      // Immediate check for hash navigation
+      if (window.location.hash) {
+        setIsScrolled(true);
+      } else {
+        const scrollTop = window.scrollY;
+        setIsScrolled(scrollTop > 50);
+      }
+    }
+  }, [isHomepage]);
+
+  const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
-    const targetElement = document.getElementById(targetId);
     
-    if (targetElement) {
-      targetElement.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+    // If we're on the homepage, just scroll to the section
+    if (isHomepage) {
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        targetElement.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    } else {
+      // Set scrolled state immediately before navigation since we know we'll be scrolling to a section
+      setIsScrolled(true);
+      // If we're on a different page, navigate to home with the hash
+      window.location.href = `/#${targetId}`;
     }
   };
 
@@ -172,16 +215,16 @@ const Navbar = () => {
         } w-full sm:w-auto top-full left-0 shadow-lg sm:shadow-none p-6 rounded-lg transition-all duration-300 ease-in-out`}>
           <a href="#discover" className={`${
             isHomepage ? 'text-gray-700 hover:text-primary-blue' : 'text-gray-700 hover:text-indigo-800'
-          }`} onClick={(e) => smoothScroll(e, "discover")}>About</a>
+          }`} onClick={(e) => handleNavigation(e, "discover")}>About</a>
           <Link href="/fleet" className={`${
             isHomepage ? 'text-gray-700 hover:text-primary-blue' : 'text-gray-700 hover:text-indigo-800'
           }`}>Fleet</Link>
           <a href="#deals" className={`${
             isHomepage ? 'text-gray-700 hover:text-primary-blue' : 'text-gray-700 hover:text-indigo-800'
-          }`} onClick={(e) => smoothScroll(e, "deals")}>Deals</a>
+          }`} onClick={(e) => handleNavigation(e, "deals")}>Deals</a>
           <a href="#contact" className={`${
             isHomepage ? 'text-gray-700 hover:text-primary-blue' : 'text-gray-700 hover:text-indigo-800'
-          }`} onClick={(e) => smoothScroll(e, "contact")}>Contact</a>
+          }`} onClick={(e) => handleNavigation(e, "contact")}>Contact</a>
         </div>
 
         {user ? (
