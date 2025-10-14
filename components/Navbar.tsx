@@ -36,19 +36,26 @@ const Navbar = () => {
     };
   }, []);
 
-  // Handle scroll for glassy navbar effect on homepage
+  // Handle scroll for glassy navbar effect on homepage with debouncing
   useEffect(() => {
     if (!isHomepage) {
       setIsScrolled(false);
       return;
     }
 
+    let ticking = false;
     const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      setIsScrolled(scrollTop > 50);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollTop = window.scrollY;
+          setIsScrolled(scrollTop > 50);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHomepage]);
 

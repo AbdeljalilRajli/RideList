@@ -5,28 +5,48 @@ import { CarProps } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { notFound } from "next/navigation";
 import BookingForm from "@/components/BookingForm";
 import { getCarImage } from "@/lib/utils";
-import { calculateCarRent } from "@/utils";
 import { useParams } from "next/navigation";
 
 export default function CarDetailPage() {
   const params = useParams();
   const [car, setCar] = useState<CarProps | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
 
   useEffect(() => {
     if (params.id) {
-      // Find car by creating a unique ID from make-model-year
-      const foundCar = cars.find((c, index) => {
-        const carId = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, '-')}-${c.year}-${index}`;
-        return carId === params.id;
-      });
-      setCar(foundCar || null);
+      // Pre-compute car IDs for better performance
+      const carId = params.id as string;
+      let foundCar: CarProps | null = null;
+      
+      // More efficient search - break early when found
+      for (let index = 0; index < cars.length; index++) {
+        const c = cars[index];
+        const computedId = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, '-')}-${c.year}-${index}`;
+        if (computedId === carId) {
+          foundCar = c;
+          break;
+        }
+      }
+      
+      setCar(foundCar);
+      setLoading(false);
     }
   }, [params.id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading car details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!car) {
     return (

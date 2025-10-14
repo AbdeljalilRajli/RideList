@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CarProps } from "@/types";
 import { CustomButton } from "./CustomButton";
-import { calculateCarRent } from "@/utils";
+// Removed unused import
 import { getCarImage } from "@/lib/utils";
 import CarDetails from "./CarDetails";
 
@@ -43,7 +43,13 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
       </p>
 
       <div className="relative w-full h-40 my-3 object-contain">
-        <Image src={getCarImage(car)} alt="car model" fill priority className="object-contain" />
+        <Image 
+          src={getCarImage(car)} 
+          alt={`${make} ${model}`} 
+          fill 
+          priority={index < 6} // Only prioritize first 6 images
+          className="object-contain" 
+        />
       </div>
 
       <div className="relative flex w-full mt-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import CarCard from "@/components/CarCard";
@@ -11,8 +11,7 @@ import { CarProps } from "@/types/index";
 
 export default function FleetPage() {
   const [allCars, setAllCars] = useState<CarProps[]>([]);
-  const [filteredCars, setFilteredCars] = useState<CarProps[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Search states
   const [manufacturer, setManuFacturer] = useState("");
@@ -29,18 +28,17 @@ export default function FleetPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [carsPerPage] = useState(12);
 
-  // Get available models for selected manufacturer
-  const getAvailableModels = () => {
+  // Memoized available models for selected manufacturer
+  const availableModels = useMemo(() => {
     if (!manufacturer) return [];
     const models = cars
       .filter(car => car.make.toLowerCase().includes(manufacturer.toLowerCase()))
       .map(car => car.model);
     return Array.from(new Set(models));
-  };
+  }, [manufacturer]);
 
-  const filterCars = () => {
-    setLoading(true);
-    
+  // Memoized filtered cars to prevent unnecessary re-calculations
+  const filteredCars = useMemo(() => {
     let filtered = cars;
     
     // Filter by manufacturer
@@ -95,10 +93,8 @@ export default function FleetPage() {
       }
     }
     
-    setFilteredCars(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-    setLoading(false);
-  };
+    return filtered;
+  }, [manufacturer, model, fuel, year, transmission, priceRange, seats]);
 
   const clearFilters = () => {
     setManuFacturer("");
@@ -113,23 +109,23 @@ export default function FleetPage() {
   // Clear model when manufacturer changes
   useEffect(() => {
     if (manufacturer) {
-      const availableModels = getAvailableModels();
       if (model && !availableModels.includes(model)) {
         setModel("");
       }
     } else {
       setModel("");
     }
-  }, [manufacturer]);
-
-  useEffect(() => {
-    filterCars();
-  }, [manufacturer, model, fuel, year, transmission, priceRange, seats]);
+  }, [manufacturer, availableModels]); // Removed 'model' to prevent circular dependency
   
   useEffect(() => {
     setAllCars(cars);
-    setFilteredCars(cars);
+    setLoading(false);
   }, []);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [manufacturer, model, fuel, year, transmission, priceRange, seats]);
 
   // Pagination logic
   const indexOfLastCar = currentPage * carsPerPage;
@@ -241,7 +237,7 @@ export default function FleetPage() {
                         className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                       >
                         <option value="">All Models</option>
-                        {getAvailableModels().map((modelName) => (
+                        {availableModels.map((modelName: string) => (
                           <option key={modelName} value={modelName}>
                             {modelName}
                           </option>
@@ -305,7 +301,14 @@ export default function FleetPage() {
 
           {/* Main Content */}
           <div className="lg:w-3/4">
-            {currentCars.length > 0 ? (
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading fleet...</p>
+                </div>
+              </div>
+            ) : currentCars.length > 0 ? (
               <>
                 {/* Cars Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
@@ -369,7 +372,6 @@ export default function FleetPage() {
                 )}
               </>
             ) : (
-              !loading && (
                 <div className="text-center py-12">
                   <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                     <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,19 +389,6 @@ export default function FleetPage() {
                     Clear All Filters
                   </button>
                 </div>
-              )
-            )}
-
-            {loading && (
-              <div className="flex justify-center items-center py-12">
-                <Image 
-                  src="/loader.svg"
-                  alt="loader"
-                  width={50}
-                  height={50}
-                  className="object-contain"
-                />
-              </div>
             )}
           </div>
         </div>
