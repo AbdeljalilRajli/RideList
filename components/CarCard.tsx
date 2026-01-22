@@ -48,6 +48,8 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
           alt={`${make} ${model}`} 
           fill 
           priority={index < 6} // Only prioritize first 6 images
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          quality={70}
           className="object-contain" 
         />
       </div>

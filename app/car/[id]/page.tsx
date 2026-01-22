@@ -61,12 +61,7 @@ export default function CarDetailPage() {
     );
   }
 
-  const carImages = [
-    getCarImage(car),
-    getCarImage(car),
-    getCarImage(car),
-    getCarImage(car),
-  ];
+  const carImages = [getCarImage(car)];
 
   const features = [
     { label: "Fuel Type", value: car.fuel_type.charAt(0).toUpperCase() + car.fuel_type.slice(1) },
@@ -176,6 +171,9 @@ export default function CarDetailPage() {
                   src={carImages[currentImageIndex]}
                   alt={`${car.make} ${car.model}`}
                   fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  quality={75}
                   className="object-contain"
                 />
               </div>
@@ -194,6 +192,8 @@ export default function CarDetailPage() {
                       src={image}
                       alt={`View ${index + 1}`}
                       fill
+                      sizes="80px"
+                      quality={55}
                       className="object-contain bg-gray-50"
                     />
                   </button>

@@ -16,6 +16,7 @@ export interface CarProps {
   price_per_day: number;
   seats: number;
   color: string;
+  image?: string;
 }
 
 export type CarState = CarProps[] & { message?: string };

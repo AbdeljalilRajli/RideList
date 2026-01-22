@@ -114,6 +114,7 @@ export const manufacturers = [
       price_per_day: 45,
       seats: 5,
       color: "Silver",
+      image: "Honda Civic.webp",
     },
     {
       city_mpg: 48,
@@ -131,6 +132,7 @@ export const manufacturers = [
       price_per_day: 55,
       seats: 5,
       color: "White",
+      image: "Honda Accord Hybrid.webp",
     },
     {
       city_mpg: 28,
@@ -148,6 +150,7 @@ export const manufacturers = [
       price_per_day: 65,
       seats: 5,
       color: "Black",
+      image: "Honda CR-V.webp",
     },
     {
       city_mpg: 40,
@@ -165,6 +168,7 @@ export const manufacturers = [
       price_per_day: 70,
       seats: 5,
       color: "Blue",
+      image: "Honda CR-V Hybrid.webp",
     },
     
     // Toyota Models
@@ -184,6 +188,7 @@ export const manufacturers = [
       price_per_day: 42,
       seats: 5,
       color: "Red",
+      image: "Toyota Corolla.webp",
     },
     {
       city_mpg: 51,
@@ -201,6 +206,7 @@ export const manufacturers = [
       price_per_day: 58,
       seats: 5,
       color: "Gray",
+      image: "Toyota Camry Hybrid.webp",
     },
     {
       city_mpg: 57,
@@ -218,6 +224,7 @@ export const manufacturers = [
       price_per_day: 50,
       seats: 5,
       color: "Green",
+      image: "Toyota Prius.webp",
     },
     {
       city_mpg: 27,
@@ -235,6 +242,7 @@ export const manufacturers = [
       price_per_day: 68,
       seats: 5,
       color: "White",
+      image: "Toyota RAV4.webp",
     },
     
     // Tesla Models
@@ -254,6 +262,7 @@ export const manufacturers = [
       price_per_day: 85,
       seats: 5,
       color: "White",
+      image: "Tesla Model 3.webp",
     },
     {
       city_mpg: 120,
@@ -271,6 +280,7 @@ export const manufacturers = [
       price_per_day: 120,
       seats: 5,
       color: "Black",
+      image: "Tesla Model S.webp",
     },
     {
       city_mpg: 125,
@@ -288,6 +298,7 @@ export const manufacturers = [
       price_per_day: 95,
       seats: 7,
       color: "Blue",
+      image: "Tesla Model Y.webp",
     },
     
     // BMW Models
@@ -307,6 +318,7 @@ export const manufacturers = [
       price_per_day: 75,
       seats: 5,
       color: "Silver",
+      image: "BMW 3 Series.webp",
     },
     {
       city_mpg: 23,
@@ -324,6 +336,7 @@ export const manufacturers = [
       price_per_day: 85,
       seats: 5,
       color: "Black",
+      image: "BMW X3.webp",
     },
     {
       city_mpg: 113,
@@ -341,6 +354,7 @@ export const manufacturers = [
       price_per_day: 110,
       seats: 5,
       color: "White",
+      image: "BMW iX.webp",
     },
     
     // Mercedes-Benz Models
@@ -360,6 +374,7 @@ export const manufacturers = [
       price_per_day: 70,
       seats: 5,
       color: "Silver",
+      image: "Mercedes-Benz A-Class.webp",
     },
     {
       city_mpg: 21,
@@ -377,6 +392,7 @@ export const manufacturers = [
       price_per_day: 95,
       seats: 7,
       color: "Black",
+      image: "Mercedes-Benz GLE.webp",
     },
     
     // Audi Models
@@ -396,6 +412,7 @@ export const manufacturers = [
       price_per_day: 72,
       seats: 5,
       color: "Gray",
+      image: "Audi A4.webp",
     },
     {
       city_mpg: 22,
@@ -413,6 +430,7 @@ export const manufacturers = [
       price_per_day: 80,
       seats: 5,
       color: "White",
+      image: "Audi Q5.webp",
     },
     
     // Ford Models
@@ -432,6 +450,7 @@ export const manufacturers = [
       price_per_day: 48,
       seats: 5,
       color: "Blue",
+      image: "Ford Fusion.webp",
     },
     {
       city_mpg: 126,
@@ -449,6 +468,7 @@ export const manufacturers = [
       price_per_day: 90,
       seats: 5,
       color: "Red",
+      image: "Ford Mustang Mach-E.webp",
     },
     
     // Chevrolet Models
@@ -468,6 +488,7 @@ export const manufacturers = [
       price_per_day: 46,
       seats: 5,
       color: "Silver",
+      image: "Chevrolet Malibu.webp",
     },
     {
       city_mpg: 120,
@@ -485,6 +506,7 @@ export const manufacturers = [
       price_per_day: 55,
       seats: 5,
       color: "Green",
+      image: "Chevrolet Bolt EV.webp",
     },
     
     // Nissan Models
@@ -504,6 +526,7 @@ export const manufacturers = [
       price_per_day: 47,
       seats: 5,
       color: "White",
+      image: "Nissan Altima.webp",
     },
     {
       city_mpg: 104,
@@ -521,6 +544,7 @@ export const manufacturers = [
       price_per_day: 52,
       seats: 5,
       color: "Blue",
+      image: "Nissan Leaf.webp",
     },
     
     // Hyundai Models
@@ -540,6 +564,7 @@ export const manufacturers = [
       price_per_day: 44,
       seats: 5,
       color: "Red",
+      image: "Hyundai Elantra.webp",
     },
     {
       city_mpg: 114,
@@ -557,6 +582,7 @@ export const manufacturers = [
       price_per_day: 62,
       seats: 5,
       color: "Orange",
+      image: "Hyundai Kona Electric.webp",
     },
   ];
 
