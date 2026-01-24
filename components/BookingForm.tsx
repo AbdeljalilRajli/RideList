@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { CarProps } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -102,7 +102,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, isOpen, onClose }) => {
         totalDays,
         totalPrice,
         status: 'pending',
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       };
 
       await addDoc(collection(db, 'bookings'), bookingData);
@@ -120,7 +120,18 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, isOpen, onClose }) => {
         });
       }, 2000);
     } catch (error: any) {
-      setError(error.message);
+      console.error('Booking error:', {
+        error,
+        code: error?.code,
+        message: error?.message,
+        user: user ? { uid: user.uid, email: user.email } : null,
+      });
+
+      if (error?.code === 'permission-denied') {
+        setError('Permission denied. Please make sure Firestore rules allow creating bookings for signed-in users.');
+      } else {
+        setError(error?.message || 'Failed to create booking');
+      }
     } finally {
       setLoading(false);
     }
