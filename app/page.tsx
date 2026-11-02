@@ -67,27 +67,29 @@ export default function Home() {
       </div>
 
       {/* 1. Hero Showcase Section */}
-      <section className="max-w-[1280px] mx-auto px-6 pt-8 pb-12 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <section className="max-w-[1280px] mx-auto px-6 pt-10 pb-8 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 xl:gap-14 items-center">
           {/* Hero Left Content */}
           <div className="lg:col-span-6 flex flex-col items-start space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#EEEDF9] text-[#3730A3] font-bold text-xs tracking-wide uppercase">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EEEDF9] border border-[#3730A3]/15 text-[#3730A3] font-bold text-xs tracking-wider uppercase">
               <span className="w-2 h-2 rounded-full bg-[#3730A3] animate-pulse"></span>
               Elevated Mobility 2026
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#0F0F1A] leading-[1.12]">
-              Book a Car That’s <span className="text-[#3730A3]">Fast</span>. Rent With Ease.
+            <h1 className="text-4xl sm:text-5xl lg:text-[56px] xl:text-[60px] font-extrabold tracking-tight text-[#0F0F1A] leading-[1.08]">
+              Book a car that’s <span className="text-[#3730A3]">fast</span>.<br className="hidden sm:inline" />
+              Rent with ease.
             </h1>
 
-            <p className="text-base sm:text-lg text-[#6B7280] max-w-xl leading-relaxed">
-              The ultimate platform for convenient, stress-free car rentals at unbeatable prices. Select hand-inspected vehicles ready on your exact schedule.
+            <p className="text-base sm:text-lg text-[#6B7280] max-w-lg leading-relaxed font-normal">
+              Curated high-performance sedans, hybrids, and luxury SUVs ready on your exact schedule. Transparent pricing, zero counter lines, and digital keyless access.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-4 pt-1">
               <a
                 href="#catalogue"
-                className="inline-flex items-center gap-3 h-14 px-8 rounded-full bg-[#3730A3] text-white font-bold text-sm sm:text-base shadow-lg hover:bg-[#1E1B4B] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="inline-flex items-center gap-3 h-14 px-8 rounded-full bg-[#3730A3] hover:bg-[#1E1B4B] text-white font-bold text-sm sm:text-base shadow-[0_8px_20px_-4px_rgba(55,48,163,0.35)] hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <span>Explore Cars</span>
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
@@ -102,70 +104,104 @@ export default function Home() {
               </a>
             </div>
 
-            {/* Micro Location Meta */}
-            <div className="flex items-center gap-2.5 pt-2 text-[#6B7280] text-xs sm:text-sm">
-              <span className="material-symbols-outlined text-[#3730A3] text-[20px] shrink-0">verified_user</span>
-              <span>Zero deposit on verified corporate profiles • Available in 18 metropolitan hubs</span>
+            {/* Social Proof & Trust Strip (Cleanly integrated without overlapping) */}
+            <div className="pt-4 border-t border-[#E5E7EB] w-full flex flex-wrap items-center gap-6 text-xs text-[#6B7280]">
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-2 overflow-hidden">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#3730A3] text-white text-[11px] font-bold ring-2 ring-white">
+                    JD
+                  </span>
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#1E1B4B] text-white text-[11px] font-bold ring-2 ring-white">
+                    AL
+                  </span>
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#4F46E5] text-white text-[11px] font-bold ring-2 ring-white">
+                    SR
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1 font-bold text-[#0F0F1A]">
+                    <span className="material-symbols-outlined text-amber-500 text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      star
+                    </span>
+                    <span>4.9 / 5</span>
+                  </div>
+                  <span className="text-[11px] text-[#6B7280]">2,400+ verified rentals</span>
+                </div>
+              </div>
+
+              <div className="h-8 w-px bg-[#E5E7EB] hidden sm:block"></div>
+
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-bold text-[#0F0F1A]">Zero Deposit Hold</span>
+                  <span className="text-[11px] text-[#6B7280]">On approved member profiles</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Hero Right Visual Stacking Composition */}
+          {/* Hero Right Visual Stage */}
           <div className="lg:col-span-6 relative flex justify-center items-center mt-6 lg:mt-0">
-            {/* Backing Card with Unified Local Hero Car */}
-            <div className="relative w-full max-w-[560px] h-[380px] sm:h-[480px] rounded-3xl overflow-hidden bg-gradient-to-br from-white via-[#F8F8FB] to-[#EEEDF9] border border-[#E5E7EB] shadow-2xl flex items-center justify-center p-6 group">
-              <Image
-                src="/hero.webp"
-                alt="Signature Tier Luxury Car"
-                fill
-                priority
-                className="object-contain p-8 group-hover:scale-105 transition-transform duration-700"
-              />
-
-              {/* Glassmorphic Bottom Pill */}
-              <div className="absolute bottom-5 left-5 right-5 p-4 rounded-2xl bg-white/85 backdrop-blur-md border border-[#E5E7EB] shadow-md flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block">Signature Fleet</span>
-                  <p className="font-extrabold text-base sm:text-lg text-[#0F0F1A]">Porsche Panamera GTS</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-extrabold text-[#3730A3]">$85<span className="text-xs text-[#6B7280]">/d</span></span>
-                  <span className="px-3 py-1 rounded-full bg-[#1E1B4B] text-white text-xs font-bold shadow-sm">
-                    Available Now
-                  </span>
+            <div className="relative w-full max-w-[580px] rounded-3xl bg-gradient-to-b from-white via-[#F8F8FB] to-[#F1F2F8] border border-[#E5E7EB] shadow-xl p-6 sm:p-7 flex flex-col justify-between overflow-hidden group">
+              {/* Card Top Strip */}
+              <div className="flex items-center justify-between w-full mb-2">
+                <span className="px-3.5 py-1 rounded-full bg-[#1E1B4B] text-white text-[11px] font-bold uppercase tracking-wider">
+                  Featured Fleet
+                </span>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-semibold shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span className="text-[#0F0F1A] font-bold">Available at SFO</span>
                 </div>
               </div>
-            </div>
 
-            {/* Floating Stat Badge Top Right */}
-            <div className="absolute -top-4 -right-2 sm:right-4 z-20 flex items-center gap-3 px-5 py-3 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-[#E5E7EB]">
-              <div className="flex -space-x-2 overflow-hidden">
-                <span className="inline-block h-8 w-8 rounded-full bg-[#3730A3] text-white flex items-center justify-center text-xs font-bold ring-2 ring-white">
-                  JD
-                </span>
-                <span className="inline-block h-8 w-8 rounded-full bg-[#1E1B4B] text-white flex items-center justify-center text-xs font-bold ring-2 ring-white">
-                  AL
-                </span>
-                <span className="inline-block h-8 w-8 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-xs font-bold ring-2 ring-white">
-                  SR
-                </span>
+              {/* Vehicle Showcase Stage */}
+              <div className="w-full h-56 sm:h-64 relative flex items-center justify-center my-3">
+                {/* Soft ground shadow reflection */}
+                <div className="absolute bottom-2 w-3/4 h-6 bg-black/10 rounded-full blur-md pointer-events-none"></div>
+
+                <Image
+                  src="/hero.webp"
+                  alt="RideList Signature Crossover"
+                  fill
+                  priority
+                  className="object-contain p-4 group-hover:scale-105 transition-transform duration-700"
+                />
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1 text-[#3730A3]">
-                  <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="font-extrabold text-sm text-[#0F0F1A]">4.8</span>
+
+              {/* Integrated Bottom Specification Dock (NO OVERLAPPING BADGES) */}
+              <div className="w-full bg-white rounded-2xl p-4 sm:p-5 border border-[#E5E7EB] shadow-sm flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-extrabold text-[#0F0F1A] truncate">
+                      RideList Signature Crossover
+                    </h3>
+                    <span className="text-[11px] font-semibold text-[#6B7280] px-2 py-0.5 rounded bg-[#F1F2F8] shrink-0">
+                      Luxury AWD
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#6B7280] mt-1 truncate">
+                    Automatic • Dual-Motor AWD • 5 Seats • SFO Concourse
+                  </p>
                 </div>
-                <span className="text-[11px] font-semibold text-[#6B7280]">2K+ happy clients</span>
-              </div>
-            </div>
 
-            {/* Floating Best Price Badge Bottom Left */}
-            <div className="absolute -bottom-5 -left-2 sm:left-2 z-20 flex items-center gap-3 px-5 py-3.5 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-[#E5E7EB]">
-              <div className="w-9 h-9 rounded-full bg-[#EEEDF9] flex items-center justify-center text-[#3730A3]">
-                <span className="material-symbols-outlined text-[20px]">local_offer</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs sm:text-sm font-bold text-[#0F0F1A]">Best Price Guaranteed</span>
-                <span className="text-[11px] text-[#6B7280]">Direct rental fleet match</span>
+                <div className="text-right shrink-0">
+                  <div className="flex items-baseline justify-end gap-1">
+                    <span className="text-2xl font-extrabold text-[#3730A3]">$85</span>
+                    <span className="text-xs font-semibold text-[#6B7280]">/ day</span>
+                  </div>
+                  <Link
+                    href="/fleet"
+                    className="text-xs font-bold text-[#3730A3] hover:text-[#1E1B4B] inline-flex items-center gap-1 mt-1 group/link"
+                  >
+                    <span>View Details</span>
+                    <span className="material-symbols-outlined text-[14px] group-hover/link:translate-x-0.5 transition-transform">
+                      arrow_forward
+                    </span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -173,8 +209,8 @@ export default function Home() {
       </section>
 
       {/* 2. Floating Booking Search Bar Console */}
-      <section className="max-w-[1280px] mx-auto px-6 -mt-2 sm:-mt-4 relative z-30 w-full">
-        <div className="w-full bg-white rounded-3xl p-4 sm:p-5 shadow-xl border border-[#E5E7EB]">
+      <section className="max-w-[1280px] mx-auto px-6 py-6 relative z-30 w-full">
+        <div className="w-full bg-white rounded-3xl p-5 sm:p-6 shadow-xl border border-[#E5E7EB]">
           <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
             {/* Pick-up Location */}
             <div className="flex flex-col gap-1 px-4 py-2.5 rounded-2xl bg-[#F8F8FB] hover:bg-[#F1F2F8] border border-[#E5E7EB] transition-colors">
