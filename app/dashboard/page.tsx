@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import Link from 'next/link';
 import Image from 'next/image';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { cars } from '@/constants';
+import { getCarImage } from '@/lib/utils';
 
 interface Booking {
   id: string;
@@ -39,6 +42,8 @@ const UserDashboardContent = () => {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  const [activeTab, setActiveTab] = useState<'all' | 'confirmed' | 'pending' | 'completed'>('all');
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -54,44 +59,32 @@ const UserDashboardContent = () => {
 
   const fetchUserBookings = async () => {
     try {
-      console.log('Fetching bookings for user:', user?.uid, user?.email);
-      
-      // Try to fetch by userId first
       let bookingsQuery = query(
         collection(db, 'bookings'),
         where('userId', '==', user?.uid)
       );
-      
+
       let snapshot = await getDocs(bookingsQuery);
       let bookingsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate() || new Date(),
       })) as Booking[];
-      
-      console.log('Bookings found by userId:', bookingsData.length);
-      
-      // If no bookings found by userId, try by email (for backward compatibility)
+
       if (bookingsData.length === 0 && user?.email) {
-        console.log('Trying to fetch by email:', user.email);
         bookingsQuery = query(
           collection(db, 'bookings'),
           where('customerEmail', '==', user.email)
         );
-        
         snapshot = await getDocs(bookingsQuery);
         bookingsData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate() || new Date(),
         })) as Booking[];
-        
-        console.log('Bookings found by email:', bookingsData.length);
       }
-      
-      // Sort by creation date (newest first)
+
       bookingsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      
       setBookings(bookingsData);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -100,197 +93,358 @@ const UserDashboardContent = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-100 pt-20 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-blue"></div>
+      <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3730A3]"></div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
+
+  const activeBooking = bookings.find(b => b.status === 'confirmed' || b.status === 'pending');
+  const totalSpent = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+  const filteredBookings = bookings.filter(b => {
+    if (activeTab === 'all') return true;
+    return b.status === activeTab;
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-100 pt-20">
-      {/* Header */}
-      <div className="relative bg-gradient-to-r from-white via-blue-50/30 to-white overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-100/40 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-16 -left-24 w-64 h-64 bg-indigo-100/30 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative max-width padding-x py-12">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="w-16 h-16 bg-primary-blue rounded-full flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">
-                {user.displayName?.charAt(0) || user.email?.charAt(0)}
-              </span>
+    <main className="min-h-screen bg-[#F8F8FB] text-[#0F0F1A] pt-24 pb-20">
+      {/* Digital Key Modal */}
+      {isKeyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F0F1A]/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-[#E5E7EB]">
+            <button
+              onClick={() => setIsKeyModalOpen(false)}
+              className="absolute top-6 right-6 w-9 h-9 rounded-full bg-[#F8F8FB] border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#0F0F1A]"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
+                <span className="material-symbols-outlined">smartphone</span>
+              </div>
+              <div>
+                <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Touchless Concourse Access</span>
+                <h3 className="text-xl font-bold text-[#0F0F1A]">Digital Keyless Pass</h3>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-extrabold text-gray-900">
-                Welcome back, <span className="text-primary-blue">{user.displayName}</span>
-              </h1>
-              <p className="text-xl text-gray-600 mt-2">
-                Manage your bookings and profile
+
+            <div className="p-6 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] flex flex-col items-center justify-center text-center mb-6">
+              <div className="w-36 h-36 bg-white p-3 rounded-xl border border-[#E5E7EB] flex items-center justify-center mb-3">
+                <span className="material-symbols-outlined text-6xl text-[#3730A3]">qr_code_2</span>
+              </div>
+              <p className="font-extrabold text-lg text-[#0F0F1A] tracking-wider">RL-{user.uid.slice(0, 8).toUpperCase()}</p>
+              <p className="text-xs text-[#6B7280] mt-1">Scan at Express Concourse Reader or SFO Terminal Gate</p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs">
+                <span className="text-[#6B7280] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-[#3730A3]">bluetooth</span> NFC Proximity Unlock
+                </span>
+                <span className="font-bold text-[#0F0F1A]">Armed & Ready</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsKeyModalOpen(false)}
+              className="w-full h-12 rounded-full bg-[#3730A3] hover:bg-[#312E81] text-white font-bold text-sm transition-all"
+            >
+              Close Pass
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full max-w-[1280px] mx-auto px-6 flex flex-col gap-10">
+        {/* 1. Top Profile & Tier Header */}
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2 border-b border-[#E5E7EB]">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 rounded-full bg-[#3730A3] text-white flex items-center justify-center text-3xl font-extrabold shadow-md">
+                {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#3730A3] border-2 border-white flex items-center justify-center text-white" title="Verified Member">
+                <span className="material-symbols-outlined text-[16px]">verified</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0F0F1A] tracking-tight">
+                  {user.displayName || "RideList Member"}
+                </h1>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#1E1B4B] text-white text-xs font-bold tracking-wide">
+                  <span className="material-symbols-outlined text-[14px] text-indigo-300">stars</span>
+                  {userData?.role === 'admin' ? "ADMINISTRATOR TIER" : "EXECUTIVE TIER"}
+                </span>
+              </div>
+              <p className="text-sm text-[#6B7280] flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span>{user.email}</span>
+                <span className="w-1 h-1 rounded-full bg-[#E5E7EB]"></span>
+                <span className="font-semibold text-[#0F0F1A]">#RL-MBR-{user.uid.slice(0, 6).toUpperCase()}</span>
               </p>
             </div>
           </div>
-        </div>
-        
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden">
-          <svg className="relative block w-full h-8" viewBox="0 0 1200 120" preserveAspectRatio="none">
-            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" className="fill-gray-50"></path>
-          </svg>
-        </div>
-      </div>
 
-      {/* Dashboard Content */}
-      <div className="max-width padding-x py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Stats Cards */}
-          <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  <p className="text-3xl font-bold text-gray-900">{bookings.length}</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
+          {/* Tier Benefits Ribbon */}
+          <div className="flex flex-wrap items-center gap-2 p-2 rounded-full bg-white border border-[#E5E7EB] self-start lg:self-center shadow-sm">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8F8FB] text-[#0F0F1A] text-xs font-semibold">
+              <span className="material-symbols-outlined text-[16px] text-[#3730A3]">group_add</span>
+              Complimentary 2nd Driver
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8F8FB] text-[#0F0F1A] text-xs font-semibold">
+              <span className="material-symbols-outlined text-[16px] text-[#3730A3]">key</span>
+              Touchless Express Pass
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8F8FB] text-[#0F0F1A] text-xs font-semibold">
+              <span className="material-symbols-outlined text-[16px] text-[#3730A3]">percent</span>
+              10% Bonus Credits
+            </div>
+          </div>
+        </header>
+
+        {/* 2. KPI Metrics Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Active Bookings</span>
+              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">directions_car</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-[#0F0F1A]">
+                  {bookings.filter(b => b.status === 'confirmed').length} Active
+                </span>
+              </div>
+              <p className="text-xs text-[#6B7280] mt-1">Ready for scheduled dispatch</p>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Trip Velocity</span>
+              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">route</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-[#0F0F1A]">{bookings.length} Trips</span>
+                <span className="text-xs font-semibold text-emerald-600">100% On-time</span>
+              </div>
+              <p className="text-xs text-[#6B7280] mt-1">Lifetime booking ledger</p>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Total Investment</span>
+              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">stars</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-[#0F0F1A]">${totalSpent}</span>
+                <span className="text-xs font-bold text-[#3730A3]">USD</span>
+              </div>
+              <p className="text-xs text-[#6B7280] mt-1">Direct corporate savings enabled</p>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Account Clearance</span>
+              <div className="w-10 h-10 rounded-full bg-[#DCFCE7] text-emerald-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">verified</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-extrabold text-[#0F0F1A]">Verified</span>
+                <span className="material-symbols-outlined text-[20px] text-emerald-600">check_circle</span>
+              </div>
+              <p className="text-xs text-[#6B7280] mt-1">License & payment profile active</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Active Reservation Focus Card (if one exists) */}
+        {activeBooking && (
+          <div className="w-full bg-white rounded-3xl border border-[#E5E7EB] shadow-md overflow-hidden relative p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5E7EB]">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1E1B4B] text-white text-xs font-bold tracking-wide">
+                  <span className="w-2 h-2 rounded-full bg-[#3730A3] animate-ping"></span>
+                  CURRENT ACTIVE RESERVATION
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#3730A3] text-xs font-bold">
+                  <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                  Status: {activeBooking.status.toUpperCase()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#6B7280]">Booking Ref:</span>
+                <code className="px-2.5 py-1 rounded-full bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-bold text-[#0F0F1A]">
+                  RL-{activeBooking.id.slice(0, 8).toUpperCase()}
+                </code>
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Bookings</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {bookings.filter(b => b.status === 'confirmed').length}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-6">
+              <div className="lg:col-span-5 flex flex-col gap-3">
+                <h2 className="text-2xl font-extrabold text-[#0F0F1A]">
+                  {activeBooking.carMake} {activeBooking.carModel}
+                </h2>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#6B7280]">Total Duration: {activeBooking.totalDays} Days</span>
+                  <span className="text-xl font-extrabold text-[#3730A3]">${activeBooking.totalPrice}</span>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Spent</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    ${bookings.reduce((total, booking) => total + booking.totalPrice, 0)}
-                  </p>
+              <div className="lg:col-span-7 flex flex-col gap-4">
+                <div className="p-4 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider block mb-1">Pick-up</span>
+                    <p className="text-sm font-bold text-[#0F0F1A]">{activeBooking.pickupDate}</p>
+                    <p className="text-xs text-[#6B7280]">Express Airport Terminal</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider block mb-1">Return</span>
+                    <p className="text-sm font-bold text-[#0F0F1A]">{activeBooking.returnDate}</p>
+                    <p className="text-xs text-[#6B7280]">Standard return concourse</p>
+                  </div>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setIsKeyModalOpen(true)}
+                    className="h-12 px-6 rounded-full bg-[#3730A3] hover:bg-[#312E81] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">qr_code_2</span>
+                    Digital Key & Kiosk Pass
+                  </button>
+                  <Link
+                    href="/fleet"
+                    className="h-12 px-5 rounded-full bg-[#F8F8FB] border border-[#E5E7EB] text-[#0F0F1A] hover:bg-white font-semibold text-xs flex items-center justify-center transition-colors"
+                  >
+                    Book Additional Vehicle
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Bookings List */}
-          <div className="lg:col-span-4">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              <div className="p-6 border-b border-gray-100">
-                <h2 className="text-2xl font-bold text-gray-900">Your Bookings</h2>
-                <p className="text-gray-600 mt-1">Manage and track your car rentals</p>
+        {/* 4. Rental History Ledger */}
+        <section className="p-6 sm:p-8 rounded-3xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Trip Archives</span>
+              <h3 className="text-2xl font-bold text-[#0F0F1A]">Rental History</h3>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-[#F8F8FB] border border-[#E5E7EB] rounded-full self-start sm:self-auto">
+              {[
+                { label: `All Trips (${bookings.length})`, value: 'all' },
+                { label: 'Confirmed', value: 'confirmed' },
+                { label: 'Pending', value: 'pending' },
+                { label: 'Completed', value: 'completed' },
+              ].map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => setActiveTab(tab.value as any)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    activeTab === tab.value
+                      ? 'bg-white text-[#0F0F1A] shadow-sm border border-[#E5E7EB]'
+                      : 'text-[#6B7280] hover:text-[#0F0F1A]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loadingBookings ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3730A3] mx-auto mb-2"></div>
+              <p className="text-xs text-[#6B7280]">Loading booking ledger...</p>
+            </div>
+          ) : filteredBookings.length === 0 ? (
+            <div className="text-center py-16 bg-[#F8F8FB] rounded-2xl border border-[#E5E7EB] p-8">
+              <div className="w-14 h-14 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center mx-auto mb-3">
+                <span className="material-symbols-outlined text-2xl">receipt_long</span>
               </div>
-
-              {loadingBookings ? (
-                <div className="p-8 text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-blue mx-auto"></div>
-                  <p className="text-gray-600 mt-4">Loading bookings...</p>
-                </div>
-              ) : bookings.length === 0 ? (
-                <div className="p-8 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
-                  <p className="text-gray-600 mb-2">
-                    We couldn't find any bookings for your account.
-                  </p>
-                  <div className="text-sm text-gray-500 mb-4 p-3 bg-gray-50 rounded-lg">
-                    <p><strong>Debug Info:</strong></p>
-                    <p>User ID: {user?.uid}</p>
-                    <p>Email: {user?.email}</p>
-                    <p>Check browser console for more details</p>
-                  </div>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => router.push('/fleet')}
-                      className="bg-primary-blue text-white px-6 py-3 rounded-full font-medium hover:bg-primary-blue/90 transition-colors"
-                    >
-                      Browse Cars
-                    </button>
-                    <p className="text-xs text-gray-500">
-                      If you made bookings before creating an account, they may need to be migrated. Check the console for migration instructions.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {bookings.map((booking) => (
-                    <div key={booking.id} className="p-6 hover:bg-gray-50/50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {booking.carMake} {booking.carModel}
-                            </h3>
-                            <p className="text-gray-600">
-                              {new Date(booking.pickupDate).toLocaleDateString()} - {new Date(booking.returnDate).toLocaleDateString()}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {booking.totalDays} days • ${booking.totalPrice}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(booking.status)}`}>
-                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                          </span>
-                          <p className="text-sm text-gray-500 mt-2">
-                            Booked {booking.createdAt.toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
+              <h4 className="text-lg font-bold text-[#0F0F1A] mb-1">No Bookings In This Category</h4>
+              <p className="text-xs text-[#6B7280] max-w-sm mx-auto mb-4">
+                You haven&apos;t made any reservations matching this filter yet. Explore our curated fleet to book your next trip.
+              </p>
+              <Link
+                href="/fleet"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#3730A3] text-white text-xs font-bold hover:bg-[#312E81] transition-all shadow-sm"
+              >
+                Explore Fleet
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredBookings.map(booking => (
+                <div
+                  key={booking.id}
+                  className="p-5 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] hover:border-[#3730A3]/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#3730A3] shrink-0">
+                      <span className="material-symbols-outlined text-2xl">directions_car</span>
                     </div>
-                  ))}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-bold text-[#0F0F1A]">
+                          {booking.carMake} {booking.carModel}
+                        </h4>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize ${
+                          booking.status === 'confirmed'
+                            ? 'bg-[#DCFCE7] text-emerald-700'
+                            : booking.status === 'pending'
+                            ? 'bg-[#EEEDF9] text-[#3730A3]'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </div>
+                      <span className="text-xs text-[#6B7280]">
+                        {booking.pickupDate} – {booking.returnDate} • {booking.totalDays} Days Rental
+                      </span>
+                      <span className="text-sm font-extrabold text-[#0F0F1A] block mt-1">
+                        ${booking.totalPrice} Total
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <Link
+                      href="/fleet"
+                      className="h-9 px-4 rounded-full bg-[#3730A3] text-white text-xs font-bold hover:bg-[#312E81] transition-all flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">replay</span>
+                      Book Again
+                    </Link>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          </div>
-        </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 
