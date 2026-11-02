@@ -711,12 +711,15 @@ export default function CarDetailPage() {
         </div>
       </div>
 
-      {/* Booking Form Modal (keeps original Firebase booking logic intact!) */}
+      {/* Stitch 4-Step Reservation System */}
       {isBookingModalOpen && (
         <BookingForm
           car={car}
           isOpen={isBookingModalOpen}
           closeModal={() => setIsBookingModalOpen(false)}
+          initialPickupDate={pickupDate}
+          initialReturnDate={returnDate}
+          initialPickupLocation={pickupLocation === "sfo" ? "SFO Airport - Rental Concourse" : pickupLocation === "downtown" ? "Downtown San Francisco - Union Square" : "San Jose Mineta Airport (SJC)"}
         />
       )}
     </main>

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -90,6 +90,22 @@ const UserDashboardContent = () => {
       console.error('Error fetching bookings:', error);
     } finally {
       setLoadingBookings(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm("Are you sure you want to cancel this reservation? Full free cancellation is honored.")) {
+      return;
+    }
+    try {
+      await updateDoc(doc(db, "bookings", bookingId), {
+        status: "cancelled",
+      });
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" } : b))
+      );
+    } catch (err) {
+      console.error("Failed to cancel booking:", err);
     }
   };
 
@@ -322,10 +338,10 @@ const UserDashboardContent = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     onClick={() => setIsKeyModalOpen(true)}
-                    className="h-12 px-6 rounded-full bg-[#3730A3] hover:bg-[#312E81] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                    className="h-12 px-6 rounded-full bg-[#3730A3] hover:bg-[#1E1B4B] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
                   >
                     <span className="material-symbols-outlined text-[18px]">qr_code_2</span>
                     Digital Key & Kiosk Pass
@@ -336,6 +352,13 @@ const UserDashboardContent = () => {
                   >
                     Book Additional Vehicle
                   </Link>
+                  <button
+                    onClick={() => handleCancelBooking(activeBooking.id)}
+                    className="h-12 px-5 rounded-full bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">cancel</span>
+                    Cancel Trip
+                  </button>
                 </div>
               </div>
             </div>
@@ -430,9 +453,17 @@ const UserDashboardContent = () => {
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    {(booking.status === "confirmed" || booking.status === "pending") && (
+                      <button
+                        onClick={() => handleCancelBooking(booking.id)}
+                        className="h-9 px-4 rounded-full bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition-all"
+                      >
+                        Cancel
+                      </button>
+                    )}
                     <Link
                       href="/fleet"
-                      className="h-9 px-4 rounded-full bg-[#3730A3] text-white text-xs font-bold hover:bg-[#312E81] transition-all flex items-center gap-1"
+                      className="h-9 px-4 rounded-full bg-[#3730A3] text-white text-xs font-bold hover:bg-[#1E1B4B] transition-all flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[15px]">replay</span>
                       Book Again

@@ -155,7 +155,7 @@ nav {
 
 /* START: Car Card styles */
 .car-card {
-  @apply flex flex-col justify-center items-start text-[#0F0F1A] bg-white rounded-[24px] border border-[#E5E7EB];
+  @apply flex flex-col justify-between w-full text-[#0F0F1A] bg-white rounded-[24px] border border-[#E5E7EB];
   box-shadow: 0px 8px 24px -4px rgba(15, 15, 26, 0.04);
 }
 

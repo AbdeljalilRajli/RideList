@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { collection, getDocs, orderBy, query, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import React, { useEffect, useState, useMemo } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { collection, getDocs, orderBy, query, doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Link from "next/link";
 
 interface Booking {
   id: string;
@@ -19,9 +20,14 @@ interface Booking {
   customerPhone: string;
   pickupDate: string;
   returnDate: string;
+  pickupLocation?: string;
+  dropoffLocation?: string;
   totalDays: number;
   totalPrice: number;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  bookingReference?: string;
+  paySchedule?: "online" | "counter";
+  protectionPlan?: string;
   createdAt: Date;
 }
 
@@ -38,325 +44,424 @@ const AdminDashboardContent = () => {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
-  const [stats, setStats] = useState({
-    totalBookings: 0,
-    pendingBookings: 0,
-    totalRevenue: 0,
-    activeBookings: 0,
-  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "confirmed" | "pending" | "completed" | "cancelled">("all");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || userData?.role !== 'admin')) {
-      router.push('/');
+    if (!loading && (!user || userData?.role !== "admin")) {
+      router.push("/");
     }
   }, [user, userData, loading, router]);
 
   useEffect(() => {
-    if (user && userData?.role === 'admin') {
+    if (user && userData?.role === "admin") {
       fetchBookings();
     }
   }, [user, userData]);
 
   const fetchBookings = async () => {
     try {
-      const bookingsQuery = query(
-        collection(db, 'bookings'),
-        orderBy('createdAt', 'desc')
-      );
-      
+      const bookingsQuery = query(collection(db, "bookings"), orderBy("createdAt", "desc"));
       const snapshot = await getDocs(bookingsQuery);
-      const bookingsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as Booking[];
-      
+      const bookingsData = snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        };
+      }) as Booking[];
+
       setBookings(bookingsData);
-      
-      // Calculate stats
-      const totalBookings = bookingsData.length;
-      const pendingBookings = bookingsData.filter(b => b.status === 'pending').length;
-      const activeBookings = bookingsData.filter(b => b.status === 'confirmed').length;
-      const totalRevenue = bookingsData
-        .filter(b => b.status === 'confirmed' || b.status === 'completed')
-        .reduce((total, booking) => total + booking.totalPrice, 0);
-      
-      setStats({
-        totalBookings,
-        pendingBookings,
-        totalRevenue,
-        activeBookings,
-      });
     } catch (error) {
-      console.error('Error fetching bookings:', error);
+      console.error("Error fetching bookings in admin console:", error);
     } finally {
       setLoadingBookings(false);
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+  const updateBookingStatus = async (bookingId: string, newStatus: Booking["status"]) => {
+    setUpdatingId(bookingId);
     try {
-      await updateDoc(doc(db, 'bookings', bookingId), {
+      await updateDoc(doc(db, "bookings", bookingId), {
         status: newStatus,
       });
-      
-      // Update local state
-      setBookings(prev => prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: newStatus as any }
-          : booking
-      ));
-      
-      // Recalculate stats
-      const updatedBookings = bookings.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: newStatus as any }
-          : booking
+
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
       );
-      
-      const pendingBookings = updatedBookings.filter(b => b.status === 'pending').length;
-      const activeBookings = updatedBookings.filter(b => b.status === 'confirmed').length;
-      const totalRevenue = updatedBookings
-        .filter(b => b.status === 'confirmed' || b.status === 'completed')
-        .reduce((total, booking) => total + booking.totalPrice, 0);
-      
-      setStats(prev => ({
-        ...prev,
-        pendingBookings,
-        activeBookings,
-        totalRevenue,
-      }));
     } catch (error) {
-      console.error('Error updating booking status:', error);
+      console.error("Failed to update status in Firestore:", error);
+    } finally {
+      setUpdatingId(null);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-[#EEEDF9] text-[#3730A3]';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Stats calculation
+  const stats = useMemo(() => {
+    const total = bookings.length;
+    const pending = bookings.filter((b) => b.status === "pending").length;
+    const active = bookings.filter((b) => b.status === "confirmed").length;
+    const revenue = bookings
+      .filter((b) => b.status === "confirmed" || b.status === "completed")
+      .reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+    return { total, pending, active, revenue };
+  }, [bookings]);
+
+  // Filtered bookings
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      const matchesStatus = statusFilter === "all" || b.status === statusFilter;
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return matchesStatus;
+      const matchesSearch =
+        (b.customerName || "").toLowerCase().includes(q) ||
+        (b.customerEmail || "").toLowerCase().includes(q) ||
+        (b.carMake || "").toLowerCase().includes(q) ||
+        (b.carModel || "").toLowerCase().includes(q) ||
+        (b.bookingReference || "").toLowerCase().includes(q) ||
+        b.id.toLowerCase().includes(q);
+      return matchesStatus && matchesSearch;
+    });
+  }, [bookings, statusFilter, searchQuery]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-100 pt-20 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-blue"></div>
+      <div className="min-h-screen bg-[#F8F8FB] pt-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3730A3] mx-auto mb-4"></div>
+          <p className="text-sm font-semibold text-[#6B7280]">Loading operations control...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user || userData?.role !== 'admin') {
+  if (!user || userData?.role !== "admin") {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-100 pt-20">
-      {/* Header */}
-      <div className="relative bg-gradient-to-r from-white via-blue-50/30 to-white overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-100/40 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-16 -left-24 w-64 h-64 bg-indigo-100/30 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative max-width padding-x py-12">
-          <div className="flex items-center justify-between">
+    <main className="min-h-screen bg-[#F8F8FB] text-[#0F0F1A] pt-24 pb-20">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 flex flex-col gap-8">
+        {/* Top Control Header */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#E5E7EB]">
+          <div>
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1E1B4B] text-white text-xs font-bold uppercase tracking-wider">
+                <span className="material-symbols-outlined text-[15px] text-indigo-300">admin_panel_settings</span>
+                Executive Admin
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">
+                Live Ops Active
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0F0F1A] tracking-tight">
+              Fleet Operations & Bookings
+            </h1>
+            <p className="text-sm text-[#6B7280] mt-1">
+              Dispatch authorization, member reservations, and rental ledger management.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchBookings}
+              className="h-11 px-5 rounded-full bg-white border border-[#E5E7EB] hover:bg-[#F8F8FB] text-[#0F0F1A] text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">refresh</span>
+              Sync Bookings
+            </button>
+            <Link
+              href="/fleet"
+              className="h-11 px-6 rounded-full bg-[#3730A3] hover:bg-[#1E1B4B] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">directions_car</span>
+              Fleet Directory
+            </Link>
+          </div>
+        </header>
+
+        {/* KPI Metrics Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Total Bookings */}
+          <div className="p-6 rounded-3xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Total Bookings</span>
+              <div className="w-10 h-10 rounded-2xl bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">receipt_long</span>
+              </div>
+            </div>
             <div>
-              <h1 className="text-4xl font-extrabold text-gray-900">
-                Admin <span className="text-primary-blue">Dashboard</span>
-              </h1>
-              <p className="text-xl text-gray-600 mt-2">
-                Manage bookings, cars, and users
+              <span className="text-3xl font-extrabold text-[#0F0F1A]">{stats.total}</span>
+              <p className="text-xs text-[#6B7280] mt-1">All-time reservation volume</p>
+            </div>
+          </div>
+
+          {/* Active Dispatches */}
+          <div className="p-6 rounded-3xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Active Dispatches</span>
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">directions_car</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-3xl font-extrabold text-emerald-600">{stats.active}</span>
+              <p className="text-xs text-[#6B7280] mt-1">Confirmed vehicles on road / queued</p>
+            </div>
+          </div>
+
+          {/* Pending Review */}
+          <div className="p-6 rounded-3xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Pending Review</span>
+              <div className="w-10 h-10 rounded-2xl bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">schedule</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-3xl font-extrabold text-[#3730A3]">{stats.pending}</span>
+              <p className="text-xs text-[#6B7280] mt-1">Awaiting dispatch clearance</p>
+            </div>
+          </div>
+
+          {/* Total Revenue */}
+          <div className="p-6 rounded-3xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Gross Fleet Revenue</span>
+              <div className="w-10 h-10 rounded-2xl bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">paid</span>
+              </div>
+            </div>
+            <div>
+              <span className="text-3xl font-extrabold text-[#0F0F1A]">${stats.revenue}</span>
+              <p className="text-xs text-[#6B7280] mt-1">Confirmed & completed turnover</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter & Search Bar */}
+        <div className="p-6 rounded-3xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          {/* Status Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F8F8FB] border border-[#E5E7EB] rounded-full self-start md:self-auto">
+            {[
+              { id: "all", label: `All (${bookings.length})` },
+              { id: "confirmed", label: `Confirmed (${bookings.filter((b) => b.status === "confirmed").length})` },
+              { id: "pending", label: `Pending (${bookings.filter((b) => b.status === "pending").length})` },
+              { id: "completed", label: `Completed (${bookings.filter((b) => b.status === "completed").length})` },
+              { id: "cancelled", label: `Cancelled (${bookings.filter((b) => b.status === "cancelled").length})` },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id as any)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  statusFilter === tab.id
+                    ? "bg-white text-[#0F0F1A] shadow-sm border border-[#E5E7EB]"
+                    : "text-[#6B7280] hover:text-[#0F0F1A]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full md:w-80">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] text-[18px]">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search driver, email, ref #..."
+              className="w-full h-11 pl-10 pr-4 rounded-full bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-[#0F0F1A] focus:outline-none focus:ring-2 focus:ring-[#3730A3]"
+            />
+          </div>
+        </div>
+
+        {/* Bookings Ledger Section */}
+        <section className="bg-white rounded-3xl border border-[#E5E7EB] shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-[#E5E7EB] flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-[#0F0F1A]">Reservation Roster</h2>
+              <p className="text-xs text-[#6B7280]">
+                Showing {filteredBookings.length} of {bookings.length} reservations
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-primary-blue rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <span className="text-gray-700 font-medium">Admin Panel</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden">
-          <svg className="relative block w-full h-8" viewBox="0 0 1200 120" preserveAspectRatio="none">
-            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" className="fill-gray-50"></path>
-          </svg>
-        </div>
-      </div>
-
-      {/* Dashboard Content */}
-      <div className="max-width padding-x py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalBookings}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending Bookings</p>
-                <p className="text-3xl font-bold text-[#3730A3]">{stats.pendingBookings}</p>
-              </div>
-              <div className="w-12 h-12 bg-[#EEEDF9] rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-[#3730A3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Bookings</p>
-                <p className="text-3xl font-bold text-green-600">{stats.activeBookings}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-3xl font-bold text-primary-blue">${stats.totalRevenue}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bookings Management */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900">Booking Management</h2>
-            <p className="text-gray-600 mt-1">Review and manage all customer bookings</p>
           </div>
 
           {loadingBookings ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-blue mx-auto"></div>
-              <p className="text-gray-600 mt-4">Loading bookings...</p>
+            <div className="p-16 text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3730A3] mx-auto mb-3"></div>
+              <p className="text-xs text-[#6B7280]">Syncing live booking roster from Firestore...</p>
             </div>
-          ) : bookings.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+          ) : filteredBookings.length === 0 ? (
+            <div className="p-16 text-center bg-[#F8F8FB] m-6 rounded-2xl border border-[#E5E7EB]">
+              <div className="w-14 h-14 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center mx-auto mb-3">
+                <span className="material-symbols-outlined text-2xl">inbox</span>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings yet</h3>
-              <p className="text-gray-600">Bookings will appear here once customers start making reservations.</p>
+              <h3 className="text-lg font-bold text-[#0F0F1A]">No Bookings Found</h3>
+              <p className="text-xs text-[#6B7280] max-w-sm mx-auto mt-1">
+                There are no client bookings matching your current filter criteria.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F8F8FB] border-b border-[#E5E7EB] text-[#6B7280] uppercase tracking-wider font-bold">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Car</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="py-4 px-6">Driver & Contact</th>
+                    <th className="py-4 px-6">Vehicle Reserved</th>
+                    <th className="py-4 px-6">Rental Itinerary</th>
+                    <th className="py-4 px-6">Financials</th>
+                    <th className="py-4 px-6">Status</th>
+                    <th className="py-4 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {bookings.map((booking) => (
-                    <tr key={booking.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{booking.customerName}</div>
-                          <div className="text-sm text-gray-500">{booking.customerEmail}</div>
-                          <div className="text-sm text-gray-500">{booking.customerPhone}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {booking.carMake} {booking.carModel}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {new Date(booking.pickupDate).toLocaleDateString()}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          to {new Date(booking.returnDate).toLocaleDateString()}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {booking.totalDays} days
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">${booking.totalPrice}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          {booking.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => updateBookingStatus(booking.id, 'confirmed')}
-                                className="text-green-600 hover:text-green-900"
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                Cancel
-                              </button>
-                            </>
+                <tbody className="divide-y divide-[#E5E7EB]">
+                  {filteredBookings.map((b) => {
+                    const isUpdating = updatingId === b.id;
+                    const refCode = b.bookingReference || `RL-${b.id.slice(0, 6).toUpperCase()}`;
+
+                    return (
+                      <tr key={b.id} className="hover:bg-[#F8F8FB]/50 transition-colors">
+                        {/* Driver */}
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-[#0F0F1A]">{b.customerName || "Member Guest"}</span>
+                              <code className="text-[10px] px-2 py-0.5 rounded bg-[#EEEDF9] text-[#3730A3] font-bold">
+                                {refCode}
+                              </code>
+                            </div>
+                            <span className="text-[#6B7280]">{b.customerEmail}</span>
+                            <span className="text-[#9CA3AF] text-[11px]">{b.customerPhone}</span>
+                          </div>
+                        </td>
+
+                        {/* Vehicle */}
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm text-[#0F0F1A]">
+                              {b.carMake} {b.carModel}
+                            </span>
+                            <span className="text-[#6B7280]">{b.carYear || 2024} Edition</span>
+                            {b.protectionPlan && (
+                              <span className="text-[10px] font-semibold text-[#3730A3] capitalize mt-0.5">
+                                {b.protectionPlan} Plan
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Itinerary */}
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="font-semibold text-[#0F0F1A]">
+                              {b.pickupDate} → {b.returnDate}
+                            </div>
+                            <span className="text-[#6B7280]">Duration: {b.totalDays} Days</span>
+                            <span className="text-[11px] text-[#9CA3AF] truncate max-w-xs">
+                              {b.pickupLocation || "SFO Airport"}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Financials */}
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col">
+                            <span className="text-base font-extrabold text-[#0F0F1A]">${b.totalPrice}</span>
+                            <span className="text-[11px] text-[#6B7280] capitalize">
+                              {b.paySchedule === "online" ? "Online Guaranteed" : "Pay at Counter"}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-6">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold capitalize ${
+                              b.status === "confirmed"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : b.status === "pending"
+                                ? "bg-[#EEEDF9] text-[#3730A3]"
+                                : b.status === "completed"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {b.status === "confirmed" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping"></span>}
+                            {b.status}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-6 text-right">
+                          {isUpdating ? (
+                            <div className="inline-block w-4 h-4 border-2 border-[#3730A3] border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {b.status === "pending" && (
+                                <>
+                                  <button
+                                    onClick={() => updateBookingStatus(b.id, "confirmed")}
+                                    className="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => updateBookingStatus(b.id, "cancelled")}
+                                    className="px-3 py-1.5 rounded-full bg-red-100 hover:bg-red-200 text-red-700 font-bold text-[11px] transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              )}
+
+                              {b.status === "confirmed" && (
+                                <>
+                                  <button
+                                    onClick={() => updateBookingStatus(b.id, "completed")}
+                                    className="px-3 py-1.5 rounded-full bg-[#3730A3] hover:bg-[#1E1B4B] text-white font-bold text-[11px] transition-colors"
+                                  >
+                                    Mark Complete
+                                  </button>
+                                  <button
+                                    onClick={() => updateBookingStatus(b.id, "cancelled")}
+                                    className="px-3 py-1.5 rounded-full bg-red-100 hover:bg-red-200 text-red-700 font-bold text-[11px] transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              )}
+
+                              {b.status === "cancelled" && (
+                                <button
+                                  onClick={() => updateBookingStatus(b.id, "pending")}
+                                  className="px-3 py-1.5 rounded-full bg-white border border-[#E5E7EB] hover:bg-[#F8F8FB] text-[#0F0F1A] font-bold text-[11px] transition-colors"
+                                >
+                                  Reopen
+                                </button>
+                              )}
+
+                              {b.status === "completed" && (
+                                <span className="text-[11px] font-semibold text-[#6B7280]">Archived</span>
+                              )}
+                            </div>
                           )}
-                          {booking.status === 'confirmed' && (
-                            <button
-                              onClick={() => updateBookingStatus(booking.id, 'completed')}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Complete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 
