@@ -519,7 +519,7 @@ export default function ReservationCheckout({
                         </div>
                         <div>
                           <span className="block font-bold text-[#0F0F1A]">Rate</span>
-                          <span className="text-[#3730A3] font-bold">${car.price_per_day}/day</span>
+                          <span className="text-[#FFA000] font-bold">${car.price_per_day}/day</span>
                         </div>
                       </div>
                     </div>
@@ -995,7 +995,7 @@ export default function ReservationCheckout({
                             Lock in guaranteed discounted rate with complimentary express keyless lane pass.
                           </p>
                           <div className="mt-3">
-                            <span className="text-2xl font-extrabold text-[#3730A3]">${dueToday}</span>
+                            <span className="text-2xl font-extrabold text-[#FFA000]">${dueToday}</span>
                             <span className="text-xs text-[#6B7280]"> total charged today</span>
                           </div>
                         </div>
@@ -1223,7 +1223,7 @@ export default function ReservationCheckout({
                         {paySchedule === "online" ? "Charged in full today" : "Due upon pickup at desk"}
                       </span>
                     </div>
-                    <span className="text-3xl font-extrabold text-[#3730A3]">${totalEstimatedPrice}</span>
+                    <span className="text-3xl font-extrabold text-[#FFA000]">${totalEstimatedPrice}</span>
                   </div>
                 </div>
 

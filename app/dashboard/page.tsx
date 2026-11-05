@@ -320,7 +320,7 @@ const UserDashboardContent = () => {
                 </h2>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[#6B7280]">Total Duration: {activeBooking.totalDays} Days</span>
-                  <span className="text-xl font-extrabold text-[#3730A3]">${activeBooking.totalPrice}</span>
+                  <span className="text-xl font-extrabold text-[#FFA000]">${activeBooking.totalPrice}</span>
                 </div>
               </div>
 
@@ -446,7 +446,7 @@ const UserDashboardContent = () => {
                       <span className="text-xs text-[#6B7280]">
                         {booking.pickupDate} – {booking.returnDate} • {booking.totalDays} Days Rental
                       </span>
-                      <span className="text-sm font-extrabold text-[#0F0F1A] block mt-1">
+                      <span className="text-sm font-extrabold text-[#FFA000] block mt-1">
                         ${booking.totalPrice} Total
                       </span>
                     </div>
