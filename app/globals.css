@@ -18,6 +18,12 @@
   --ink-secondary: #6C757D;
   --ink-muted: #9CA3AF;
   --hairline: #E5E7EB;
+
+  /* Centralized scroll animation parameters */
+  --reveal-duration: 650ms;
+  --reveal-distance: 24px;
+  --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --reveal-scale-from: 0.96;
 }
 
 *, html, body {
@@ -286,3 +292,116 @@ nav {
   @apply cursor-default select-none py-2 pl-10 pr-4;
 }
 /* END: search manufacturer styles */
+
+
+/* =========================================================================
+   SCROLL ENTRANCE REVEAL CLASSES (Hardware Accelerated: transform + opacity)
+   ========================================================================= */
+.reveal-base {
+  will-change: opacity, transform;
+  transition-property: opacity, transform;
+  transition-duration: var(--reveal-duration);
+  transition-timing-function: var(--reveal-ease);
+}
+
+/* Default: Fade in + slide up by 24px */
+.reveal-fade-up {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance));
+}
+
+.reveal-fade-up.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Images: Gentle fade + slight scale from 0.96 to 1 */
+.reveal-fade-scale {
+  opacity: 0;
+  transform: scale(var(--reveal-scale-from));
+}
+
+.reveal-fade-scale.reveal-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Pure Fade */
+.reveal-fade {
+  opacity: 0;
+}
+
+.reveal-fade.reveal-visible {
+  opacity: 1;
+}
+
+/* =========================================================================
+   BUTTONS AND CARDS HOVER MICRO-INTERACTIONS (Slight lift + soft shadow, 200ms)
+   ========================================================================= */
+.card-hover,
+.car-card,
+article.group {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.card-hover:hover,
+article.group:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px -8px rgba(15, 15, 26, 0.1) !important;
+}
+
+.btn-hover,
+.hover-lift {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.btn-hover:hover,
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px -4px rgba(89, 55, 224, 0.25) !important;
+}
+
+/* =========================================================================
+   ACCESSIBILITY: RESPECT PREFERS-REDUCED-MOTION
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --reveal-duration: 0.01ms !important;
+    --reveal-distance: 0px !important;
+  }
+
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal-base,
+  .reveal-fade-up,
+  .reveal-fade-scale,
+  .reveal-fade {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .card-hover:hover,
+  article.group:hover,
+  .btn-hover:hover,
+  .hover-lift:hover {
+    transform: none !important;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari, Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

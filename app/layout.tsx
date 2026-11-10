@@ -7,6 +7,7 @@ import '@fortawesome/fontawesome-svg-core/styles.css';
 
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://ridelist.ma'),
   title: "RideList - Premium Car Rental Service",
   description: "Discover and rent the best cars in the world. From luxury vehicles to economy cars, find your perfect ride with RideList.",
   keywords: "car rental, luxury cars, vehicle rental, car booking, premium cars",
@@ -68,6 +69,21 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
           rel="stylesheet"
         />
+        <noscript>
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                .reveal-base,
+                .reveal-fade-up,
+                .reveal-fade-scale,
+                .reveal-fade {
+                  opacity: 1 !important;
+                  transform: none !important;
+                }
+              `,
+            }}
+          />
+        </noscript>
       </head>
       <body className="relative bg-[#F8F8FB]">
         <AuthProvider>

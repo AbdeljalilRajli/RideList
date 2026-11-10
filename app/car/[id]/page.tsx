@@ -9,13 +9,13 @@ import { CarProps } from "@/types";
 import { getCarImage } from "@/lib/utils";
 import BookingForm from "@/components/BookingForm";
 import CarCard from "@/components/CarCard";
+import { supabase } from "@/lib/supabase";
 
 export default function CarDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [car, setCar] = useState<CarProps | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
@@ -23,27 +23,78 @@ export default function CarDetailPage() {
   const [activeThumb, setActiveThumb] = useState(0);
 
   useEffect(() => {
-    if (params.id) {
+    async function loadCar() {
+      if (!params?.id) return;
       const carId = params.id as string;
-      let foundCar: CarProps | null = null;
+      setLoading(true);
 
-      for (let index = 0; index < cars.length; index++) {
-        const c = cars[index];
-        const computedId = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, "-")}-${c.year}-${index}`;
-        if (computedId === carId) {
-          foundCar = c;
-          break;
+      try {
+        const isUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            carId
+          );
+
+        // 1. If valid UUID, query Supabase directly by id
+        if (isUuid) {
+          const { data, error } = await supabase
+            .from("cars")
+            .select("*")
+            .eq("id", carId)
+            .maybeSingle();
+
+          if (data && !error) {
+            setCar(data as CarProps);
+            setLoading(false);
+            return;
+          }
         }
+
+        // 2. Query all active cars from Supabase to match slug / make / model
+        const { data: dbCars, error: dbError } = await supabase
+          .from("cars")
+          .select("*")
+          .neq("status", "hidden");
+
+        if (dbCars && !dbError && dbCars.length > 0) {
+          // Check by computed slug match or make/model match
+          const matchedCar = dbCars.find((c: any) => {
+            const slugPrefix = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, "-")}`;
+            return (
+              c.id === carId ||
+              carId.toLowerCase().startsWith(slugPrefix) ||
+              (carId.toLowerCase().includes(c.make.toLowerCase()) &&
+                carId.toLowerCase().includes(c.model.toLowerCase().replace(/\s+/g, "-")))
+            );
+          });
+
+          if (matchedCar) {
+            setCar(matchedCar as CarProps);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // 3. Fallback: check static cars (legacy slug match)
+        for (let index = 0; index < cars.length; index++) {
+          const c = cars[index];
+          const computedId = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, "-")}-${c.year}-${index}`;
+          if (computedId === carId || carId.toLowerCase().includes(c.model.toLowerCase().replace(/\s+/g, "-"))) {
+            setCar(c as CarProps);
+            break;
+          }
+        }
+      } catch (err) {
+        console.error("Error loading car details:", err);
+      } finally {
+        setLoading(false);
       }
-
-      setCar(foundCar);
-      setLoading(false);
     }
-  }, [params.id]);
+    loadCar();
+  }, [params?.id]);
 
-  const relatedCars = useMemo(() => {
+  const relatedCars: CarProps[] = useMemo(() => {
     if (!car) return [];
-    return cars.filter((c) => c.make !== car.make).slice(0, 3);
+    return (cars as CarProps[]).filter((c) => c.make !== car.make).slice(0, 3);
   }, [car]);
 
   const handleShare = () => {
@@ -84,8 +135,9 @@ export default function CarDetailPage() {
     );
   }
 
+  const isRented = car.status === "rented";
   const mainCarImage = getCarImage(car);
-  const galleryImages = [mainCarImage, mainCarImage, mainCarImage];
+  const galleryImages = (car.images && car.images.length > 0) ? car.images : [mainCarImage, mainCarImage, mainCarImage];
 
   return (
     <main className="w-full pt-[104px] bg-[#F8F8FB] text-[#000000] min-h-screen pb-24">
@@ -107,20 +159,26 @@ export default function CarDetailPage() {
           </nav>
 
           <div className="flex items-center gap-3">
+            {isRented ? (
+              <div className="px-3.5 py-1.5 rounded-full bg-[#181524] text-white text-xs font-bold uppercase tracking-wider">
+                Currently Rented
+              </div>
+            ) : (
+              <div className="px-3.5 py-1.5 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Available Now
+              </div>
+            )}
             <button
               onClick={handleShare}
               className="px-4 py-2 rounded-full border border-[#E5E7EB] bg-[#F8F8FB] text-xs font-bold text-[#000000] hover:bg-[#EEEDF9] transition-all"
             >
               {copiedShare ? "Link Copied!" : "Share Vehicle"}
             </button>
-            <div className="px-3.5 py-1.5 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
-              RideList Certified
-            </div>
           </div>
         </div>
       </section>
 
-      {/* 2. Primary Showcase Section (Figma Frame 1:4444) */}
+      {/* 2. Primary Showcase Section */}
       <section className="max-w-[1440px] mx-auto px-6 lg:px-16 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           {/* Left Column: Image stage & Thumbnail Gallery */}
@@ -137,7 +195,7 @@ export default function CarDetailPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-3xl font-extrabold text-[#FFA000] block">
-                    ${car.price_per_day}
+                    {car.price_per_day} DH
                   </span>
                   <span className="text-xs text-[#6C757D]">per day</span>
                 </div>
@@ -146,7 +204,7 @@ export default function CarDetailPage() {
               {/* Main Image Stage */}
               <div className="relative w-full h-[320px] sm:h-[400px] bg-[#F8F8FB] rounded-2xl flex items-center justify-center p-6 my-4">
                 <Image
-                  src={galleryImages[activeThumb]}
+                  src={galleryImages[activeThumb] || mainCarImage}
                   alt={`${car.make} ${car.model}`}
                   fill
                   priority
@@ -154,9 +212,9 @@ export default function CarDetailPage() {
                 />
               </div>
 
-              {/* 3 Thumbnail Angles */}
+              {/* Thumbnail Angles */}
               <div className="grid grid-cols-3 gap-4 pt-2">
-                {galleryImages.map((img, idx) => (
+                {galleryImages.slice(0, 3).map((img, idx) => (
                   <button
                     key={idx}
                     type="button"
@@ -179,7 +237,6 @@ export default function CarDetailPage() {
 
           {/* Right Column: Technical Specifications & Rent a car Button */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            {/* Tech Specs Box */}
             <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm">
               <h2 className="text-xl font-bold text-[#000000] mb-6">
                 Technical Specification
@@ -208,16 +265,16 @@ export default function CarDetailPage() {
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
-                  <span className="text-xs text-[#6C757D] block mb-1">Efficiency</span>
+                  <span className="text-xs text-[#6C757D] block mb-1">Mileage Policy</span>
                   <span className="text-sm font-bold text-[#000000]">
-                    {car.city_mpg} City / {car.highway_mpg || car.combination_mpg || 30} Hwy
+                    {car.km_policy || "Unlimited"}
                   </span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
-                  <span className="text-xs text-[#6C757D] block mb-1">Drivetrain</span>
+                  <span className="text-xs text-[#6C757D] block mb-1">Security Deposit</span>
                   <span className="text-sm font-bold text-[#000000]">
-                    {car.drive?.toUpperCase() || "FWD"}
+                    {car.deposit_amount ? `${car.deposit_amount} DH` : "3,000 DH"}
                   </span>
                 </div>
 
@@ -229,18 +286,35 @@ export default function CarDetailPage() {
                 </div>
               </div>
 
-              {/* Main CTA: Rent a car (Figma Frame 1:4560) */}
-              <button
-                onClick={() => setIsBookingModalOpen(true)}
-                className="w-full h-14 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] text-white font-bold text-base shadow-[0_8px_24px_rgba(89,55,224,0.3)] transition-all flex items-center justify-center gap-2 mb-8"
-              >
-                <span>Rent a car</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
+              {/* Main CTA: Rent a car or Rented state */}
+              {isRented ? (
+                <div className="mb-8 p-4 rounded-2xl bg-[#F1F1F6] border border-[#E5E7EB] text-center">
+                  <span className="block text-sm font-bold text-black mb-1">
+                    Currently Rented
+                  </span>
+                  <p className="text-xs text-[#6C757D] mb-3">
+                    This vehicle is currently on the road and unavailable for reservation.
+                  </p>
+                  <Link
+                    href="/fleet"
+                    className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white font-bold text-xs transition-all shadow-sm"
+                  >
+                    Browse Available Fleet →
+                  </Link>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsBookingModalOpen(true)}
+                  className="w-full h-14 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] text-white font-bold text-base shadow-[0_8px_24px_rgba(89,55,224,0.3)] transition-all flex items-center justify-center gap-2 mb-8 cursor-pointer hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
+                >
+                  <span>Rent a car</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              )}
 
-              {/* Car Equipment & Features Checklist (Figma Frame 1:4562) */}
+              {/* Car Equipment & Features Checklist */}
               <div className="pt-6 border-t border-[#E5E7EB]">
                 <h3 className="text-base font-bold text-[#000000] mb-4">
                   Car Equipment & Comfort
@@ -271,7 +345,7 @@ export default function CarDetailPage() {
         </div>
       </section>
 
-      {/* 3. Related Vehicles Section (Figma Frame 1002:2568) */}
+      {/* 3. Related Vehicles Section */}
       <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-16">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -292,7 +366,7 @@ export default function CarDetailPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {relatedCars.map((related, idx) => (
-            <CarCard key={`${related.make}-${related.model}-${idx}`} car={related} index={idx} />
+            <CarCard key={related.id || `${related.make}-${related.model}-${idx}`} car={related} index={idx} />
           ))}
         </div>
       </section>
