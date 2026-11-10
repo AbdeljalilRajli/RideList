@@ -7,13 +7,12 @@ import { SearchBarProps } from '@/types';
 const SearchBar = ({ setManuFacturer, setModel }: SearchBarProps) => {
   const handleManufacturerChange = (manufacturer: string) => {
     setManuFacturer(manufacturer);
-    // Clear model when manufacturer changes
     setModel('');
   };
 
   return (
     <div className="w-full">
-      <SearchManufacturer 
+      <SearchManufacturer
         selected=""
         setSelected={handleManufacturerChange}
       />

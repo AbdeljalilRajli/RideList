@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,23 +6,42 @@
 
 /* Custom primary color */
 :root {
-  --primary-blue: #3730a3;
+  --primary-blue: #5937E0;
+  --canvas: #F8F8FB;
+  --surface-white: #FFFFFF;
+  --surface-subtle: #F1F1F6;
+  --surface-accent: #EEEDF9;
+  --indigo: #5937E0;
+  --indigo-hover: #4A2CC7;
+  --indigo-dark: #1E1B4B;
+  --ink: #000000;
+  --ink-secondary: #6C757D;
+  --ink-muted: #9CA3AF;
+  --hairline: #E5E7EB;
+
+  /* Centralized scroll animation parameters */
+  --reveal-duration: 650ms;
+  --reveal-distance: 24px;
+  --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --reveal-scale-from: 0.96;
 }
 
-* {
+*, html, body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Manrope", sans-serif;
+  font-family: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-html {
-  scroll-behavior: smooth;
+body {
+  font-family: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #F8F8FB;
+  color: #000000;
 }
 
 /* START: General styles */
 .max-width {
-  @apply max-w-[1440px] mx-auto;
+  @apply max-w-[1280px] mx-auto;
 }
 
 .padding-x {
@@ -45,33 +64,26 @@ html {
   @apply flex flex-row relative justify-center items-center py-3 px-6 outline-none;
 }
 
-/* Modern gradient button style */
+/* Indigo gradient button */
 .gradient-btn {
-  background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #3730a3 100%);
-  background-size: 200% 200%;
-  animation: gradientShift 3s ease infinite;
-  box-shadow: 0 4px 15px rgba(55, 48, 163, 0.4);
+  background: #3730A3;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(55, 48, 163, 0.3);
 }
 
 .gradient-btn:hover {
+  background: #312E81;
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(55, 48, 163, 0.6);
+  box-shadow: 0 8px 25px rgba(55, 48, 163, 0.5);
 }
 
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 /* END: General styles */
 
 /* NavBar Mobile */
-
-.mobile__navbar-btn  {
+.mobile__navbar-btn {
   background: none;
   border: none;
-  font-size: 24px; 
+  font-size: 24px;
   cursor: pointer;
 }
 
@@ -81,15 +93,15 @@ nav {
 
 /* START: Hero styles */
 .hero {
-  @apply flex xl:flex-row flex-col gap-5 relative z-0 max-w-[1440px] mx-auto;
+  @apply flex xl:flex-row flex-col gap-5 relative z-0 max-w-[1280px] mx-auto;
 }
 
 .hero__title {
-  @apply 2xl:text-[48px] sm:text-[40px] text-[40px] font-extrabold;
+  @apply 2xl:text-[64px] sm:text-[48px] text-[40px] font-extrabold text-[#0F0F1A];
 }
 
 .hero__subtitle {
-  @apply text-[27px] text-black-100 font-light mt-5;
+  @apply text-lg text-[#6B7280] font-normal mt-5 leading-relaxed;
 }
 
 .hero__image-container {
@@ -107,9 +119,8 @@ nav {
 /* END: Hero styles */
 
 /* START: Home styles */
-
 .home__text-container {
-  @apply flex flex-col items-start justify-start gap-y-2.5 text-black-100;
+  @apply flex flex-col items-start justify-start gap-y-2.5 text-[#0F0F1A];
 }
 
 .home__filters {
@@ -121,7 +132,7 @@ nav {
 }
 
 .home__cars-wrapper {
-  @apply grid 2xl:grid-cols-4 xl:grid-cols-3 md:grid-cols-2 grid-cols-1 w-full gap-8 pt-14;
+  @apply grid 2xl:grid-cols-4 xl:grid-cols-3 md:grid-cols-2 grid-cols-1 w-full gap-6;
 }
 
 .home__error-container {
@@ -131,7 +142,13 @@ nav {
 
 /* START: Car Card styles */
 .car-card {
-  @apply flex flex-col p-6 justify-center items-start text-black-100 bg-gray-100 hover:bg-white hover:shadow-md rounded-3xl;
+  @apply flex flex-col justify-between w-full text-[#0F0F1A] bg-white rounded-[24px] border border-[#E5E7EB];
+  box-shadow: 0px 8px 24px -4px rgba(15, 15, 26, 0.04);
+}
+
+.car-card:hover {
+  box-shadow: 0px 16px 36px -6px rgba(15, 15, 26, 0.08);
+  transform: translateY(-2px);
 }
 
 .car-card__content {
@@ -139,27 +156,27 @@ nav {
 }
 
 .car-card__content-title {
-  @apply text-[22px] leading-[26px] font-bold capitalize;
+  @apply text-[18px] leading-snug font-bold text-[#0F0F1A] capitalize;
 }
 
 .car-card__price {
-  @apply flex mt-6 text-[32px] leading-[38px] font-extrabold;
+  @apply flex mt-4 text-[28px] leading-tight font-extrabold text-[#0F0F1A];
 }
 
 .car-card__price-dollar {
-  @apply self-start text-[14px] leading-[17px] font-semibold;
+  @apply self-start text-[13px] leading-[17px] font-semibold text-[#6B7280];
 }
 
 .car-card__price-day {
-  @apply self-end text-[14px] leading-[17px] font-medium;
+  @apply self-end text-[13px] leading-[17px] font-medium text-[#6B7280];
 }
 
 .car-card__image {
-  @apply relative w-full h-40 my-3 object-contain;
+  @apply relative w-full h-44 my-3 object-contain;
 }
 
 .car-card__icon-container {
-  @apply flex group-hover:invisible w-full justify-between text-grey;
+  @apply flex group-hover:invisible w-full justify-between text-[#6B7280];
 }
 
 .car-card__icon {
@@ -167,7 +184,7 @@ nav {
 }
 
 .car-card__icon-text {
-  @apply text-[14px] leading-[17px];
+  @apply text-[13px] leading-[17px] text-[#6B7280];
 }
 
 .car-card__btn-container {
@@ -177,31 +194,36 @@ nav {
 
 /* START: Car Details styles */
 .car-details__dialog-panel {
-  @apply relative w-full max-w-lg max-h-[90vh] overflow-y-auto transform rounded-2xl bg-white p-6 text-left shadow-xl transition-all flex flex-col gap-5;
+  @apply relative w-full max-w-lg max-h-[90vh] overflow-y-auto transform rounded-[24px] bg-white p-6 text-left shadow-xl transition-all flex flex-col gap-5;
 }
 
 .car-details__close-btn {
-  @apply absolute top-2 right-2 z-10 w-fit p-2 bg-primary-blue-100 rounded-full;
+  @apply absolute top-2 right-2 z-10 w-fit p-2 bg-[#EEEDF9] rounded-full;
 }
 
 .car-details__main-image {
-  @apply relative w-full h-40 bg-pattern bg-cover bg-center rounded-lg;
+  @apply relative w-full h-40 bg-[#F1F1F6] rounded-[16px];
 }
 /* END: Car Details styles */
 
 /* START: Custom Filter styles */
 .custom-filter__btn {
-  @apply relative w-full min-w-[127px] flex justify-between items-center cursor-default rounded-lg bg-white py-2 px-3 text-left shadow-md sm:text-sm border;
+  @apply relative w-full min-w-[127px] flex justify-between items-center cursor-default rounded-full bg-[#F1F1F6] py-2.5 px-4 text-left text-sm border border-[#E5E7EB] text-[#0F0F1A] font-medium;
+}
+
+.custom-filter__btn:focus {
+  @apply outline-none ring-2 ring-[#3730A3] ring-offset-1;
 }
 
 .custom-filter__options {
-  @apply absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm;
+  @apply absolute mt-1 max-h-60 w-full overflow-auto rounded-[16px] bg-white py-1 text-base shadow-lg ring-1 ring-[#E5E7EB] focus:outline-none sm:text-sm z-50;
 }
 /* END: Custom Filter styles */
 
 /* START: Footer styles */
 .footer {
-  @apply flex flex-col text-black-100  mt-5 border-t border-gray-100;
+  @apply flex flex-col text-[#0F0F1A] border-t border-[#E5E7EB];
+  background-color: #F1F1F6;
 }
 
 .footer__links-container {
@@ -221,7 +243,9 @@ nav {
 }
 
 .footer__copyrights {
-  @apply flex justify-between items-center flex-wrap mt-10 border-t border-gray-100 sm:px-16 px-6 py-10;
+  @apply flex justify-between items-center flex-wrap mt-10 sm:px-16 px-6 py-6;
+  background-color: #1E1B4B;
+  border-radius: 24px 24px 0 0;
 }
 
 .footer__copyrights-link {
@@ -239,7 +263,11 @@ nav {
 }
 
 .searchbar__input {
-  @apply w-full h-[48px] pl-12 p-4 bg-gray-100 rounded-r-full max-sm:rounded-full outline-none cursor-pointer text-sm;
+  @apply w-full h-[48px] pl-12 p-4 bg-[#F1F1F6] rounded-full outline-none cursor-pointer text-sm border border-[#E5E7EB] text-[#0F0F1A] placeholder:text-[#9CA3AF];
+}
+
+.searchbar__input:focus {
+  @apply ring-2 ring-[#3730A3] border-[#3730A3];
 }
 /* END: searchbar styles */
 
@@ -249,14 +277,131 @@ nav {
 }
 
 .search-manufacturer__input {
-  @apply w-full h-[48px] pl-12 p-4 rounded-l-full max-sm:rounded-full bg-gray-100 outline-none cursor-pointer text-sm;
+  @apply w-full h-[48px] pl-12 p-4 rounded-full bg-[#F1F1F6] outline-none cursor-pointer text-sm border border-[#E5E7EB] text-[#0F0F1A] placeholder:text-[#9CA3AF];
+}
+
+.search-manufacturer__input:focus {
+  @apply ring-2 ring-[#3730A3] border-[#3730A3];
 }
 
 .search-manufacturer__options {
-  @apply absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm;
+  @apply absolute mt-1 max-h-60 w-full overflow-auto rounded-[16px] bg-white py-1 text-base shadow-lg ring-1 ring-[#E5E7EB] focus:outline-none sm:text-sm z-50;
 }
 
 .search-manufacturer__option {
   @apply cursor-default select-none py-2 pl-10 pr-4;
 }
 /* END: search manufacturer styles */
+
+
+/* =========================================================================
+   SCROLL ENTRANCE REVEAL CLASSES (Hardware Accelerated: transform + opacity)
+   ========================================================================= */
+.reveal-base {
+  will-change: opacity, transform;
+  transition-property: opacity, transform;
+  transition-duration: var(--reveal-duration);
+  transition-timing-function: var(--reveal-ease);
+}
+
+/* Default: Fade in + slide up by 24px */
+.reveal-fade-up {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance));
+}
+
+.reveal-fade-up.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Images: Gentle fade + slight scale from 0.96 to 1 */
+.reveal-fade-scale {
+  opacity: 0;
+  transform: scale(var(--reveal-scale-from));
+}
+
+.reveal-fade-scale.reveal-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Pure Fade */
+.reveal-fade {
+  opacity: 0;
+}
+
+.reveal-fade.reveal-visible {
+  opacity: 1;
+}
+
+/* =========================================================================
+   BUTTONS AND CARDS HOVER MICRO-INTERACTIONS (Slight lift + soft shadow, 200ms)
+   ========================================================================= */
+.card-hover,
+.car-card,
+article.group {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.card-hover:hover,
+article.group:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px -8px rgba(15, 15, 26, 0.1) !important;
+}
+
+.btn-hover,
+.hover-lift {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.btn-hover:hover,
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px -4px rgba(89, 55, 224, 0.25) !important;
+}
+
+/* =========================================================================
+   ACCESSIBILITY: RESPECT PREFERS-REDUCED-MOTION
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --reveal-duration: 0.01ms !important;
+    --reveal-distance: 0px !important;
+  }
+
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal-base,
+  .reveal-fade-up,
+  .reveal-fade-scale,
+  .reveal-fade {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .card-hover:hover,
+  article.group:hover,
+  .btn-hover:hover,
+  .hover-lift:hover {
+    transform: none !important;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari, Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

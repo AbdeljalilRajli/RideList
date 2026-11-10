@@ -1,42 +1,57 @@
 "use client";
 
 import React, { useState } from "react";
-import { CustomButton } from "@/components/CustomButton"; // Ensure the path is correct
 
 export function NewsLetter() {
   const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubscribe = () => {
-    // Handle subscription logic here (e.g., API call)
-    console.log(`Subscribed: ${email}`);
-    setEmail(""); // Reset the email input after subscription
+    if (!email) return;
+    setSubmitted(true);
+    setEmail("");
+    setTimeout(() => setSubmitted(false), 3000);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[15rem] mb-10 w-full antialiased">
-      <div className="max-w-2xl w-full p-4 text-center flex flex-col items-center">
-        <h1 className="hero__title text-center mb-4">Join the RideList Waitlist</h1>
-        <p className="text-neutral-500 max-w-lg mx-auto my-2 text-sm text-center relative z-10">
-          Welcome to RideList, the ultimate car listing platform. 
-          Discover reliable, affordable, and high-quality vehicles tailored for your needs. 
-          Whether you're buying, selling, or just browsing, RideList is here to help you find your perfect ride.
+    <section className="w-full bg-[#EEEDF9] rounded-[24px] px-8 py-14 md:py-16">
+      <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
+        {/* Eyebrow */}
+        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#3730A3]/10 text-[#3730A3] text-xs font-bold tracking-widest uppercase">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3730A3] animate-pulse" />
+          Newsletter
+        </span>
+
+        {/* Headline */}
+        <h2 className="text-3xl md:text-4xl font-extrabold text-[#0F0F1A] leading-tight">
+          Join the RideList Waitlist
+        </h2>
+
+        {/* Subtitle */}
+        <p className="text-[#6B7280] text-base leading-relaxed max-w-lg">
+          Welcome to RideList, the ultimate car listing platform. Discover reliable, affordable, and high-quality vehicles tailored for your needs.
         </p>
 
-        <div className="flex items-center justify-center mt-4">
+        {/* Form */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md mt-2">
           <input
-            type="text"
-            placeholder="info@ridelist.com"
-            className="rounded-lg border py-2 px-4 border-indigo-800 focus:ring-2 focus:ring-indigo-800 w-1/2 mr-2 placeholder:text-neutral-400"
+            type="email"
+            placeholder="your@email.com"
+            className="flex-1 w-full h-12 px-5 rounded-full border border-[#E5E7EB] bg-white text-[#0F0F1A] text-sm placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#3730A3] focus:border-[#3730A3] transition-all"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubscribe()}
           />
-          <CustomButton 
-            title="Subscribe"
-            containerStyles="bg-blue-900 [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))] rounded-full text-white"
-            handleClick={handleSubscribe}
-          />
+          <button
+            onClick={handleSubscribe}
+            className="h-12 px-7 rounded-full bg-[#3730A3] text-white font-semibold text-sm hover:bg-[#312E81] active:scale-[0.98] transition-all shadow-sm whitespace-nowrap"
+          >
+            {submitted ? "Subscribed! ✓" : "Subscribe"}
+          </button>
         </div>
+
+        <p className="text-xs text-[#9CA3AF]">No spam, ever. Unsubscribe at any time.</p>
       </div>
-    </div>
+    </section>
   );
 }

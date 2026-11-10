@@ -15,10 +15,14 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*service-account*.json
 
 # debug
 npm-debug.log*
@@ -26,7 +30,15 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
+.env.local
+.env.development
+.env.test
+.env.production
+.env*.backup
+*.env
+!.env.example
 
 # vercel
 .vercel

@@ -3,10 +3,11 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
-import '@fortawesome/fontawesome-svg-core/styles.css'; // Import Font Awesome CSS
+import '@fortawesome/fontawesome-svg-core/styles.css';
 
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://ridelist.ma'),
   title: "RideList - Premium Car Rental Service",
   description: "Discover and rent the best cars in the world. From luxury vehicles to economy cars, find your perfect ride with RideList.",
   keywords: "car rental, luxury cars, vehicle rental, car booking, premium cars",
@@ -54,12 +55,37 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/logo.svg" />
+        <link rel="icon" href="/logo-icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo-icon.png" />
         <meta name="theme-color" content="#3730a3" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+          rel="stylesheet"
+        />
+        <noscript>
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                .reveal-base,
+                .reveal-fade-up,
+                .reveal-fade-scale,
+                .reveal-fade {
+                  opacity: 1 !important;
+                  transform: none !important;
+                }
+              `,
+            }}
+          />
+        </noscript>
       </head>
-      <body className="relative">
+      <body className="relative bg-[#F8F8FB]">
         <AuthProvider>
           <Navbar />
           {children}

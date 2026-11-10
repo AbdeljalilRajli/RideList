@@ -1,6 +1,7 @@
 import { MouseEventHandler } from "react";
 
 export interface CarProps {
+  id?: string;
   city_mpg: number;
   class: string;
   combination_mpg: number;
@@ -17,6 +18,11 @@ export interface CarProps {
   seats: number;
   color: string;
   image?: string;
+  images?: string[];
+  status?: "available" | "rented" | "maintenance" | "hidden";
+  km_policy?: string;
+  deposit_amount?: number;
+  created_at?: string;
 }
 
 export type CarState = CarProps[] & { message?: string };
@@ -59,18 +65,19 @@ export interface OptionProps {
   value: string;
 }
 
-export interface CustomFilterProps<T> {
+export interface CustomFilterProps<T = any> {
+  title?: string;
   options: OptionProps[];
-  setFilter: (selected: T) => void;
+  setFilter: (value: T) => void;
+}
+
+export interface SearchManuFacturerProps {
+  selected: string;
+  setSelected: (selected: string) => void;
 }
 
 export interface ShowMoreProps {
   pageNumber: number;
   isNext: boolean;
   setLimit: (limit: number) => void;
-}
-
-export interface SearchManuFacturerProps {
-  selected: string;
-  setSelected: (selected: string) => void;
 }

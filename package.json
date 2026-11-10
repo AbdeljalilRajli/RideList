@@ -12,11 +12,10 @@
     "@fortawesome/free-brands-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@headlessui/react": "^2.1.9",
-    "aceternity-ui": "^0.2.2",
+    "@supabase/supabase-js": "^2.119.0",
     "clsx": "^2.1.1",
-    "firebase": "^12.3.0",
     "framer-motion": "^11.11.1",
-    "next": "14.2.14",
+    "next": "^14.2.35",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^2.5.3"
@@ -26,6 +25,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "postcss": "^8",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

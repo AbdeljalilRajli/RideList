@@ -1,48 +1,116 @@
 "use client";
 
-import { cars } from "@/constants";
-import { CarProps } from "@/types";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import BookingForm from "@/components/BookingForm";
+import { useParams, useRouter } from "next/navigation";
+import { cars } from "@/constants";
+import { CarProps } from "@/types";
 import { getCarImage } from "@/lib/utils";
-import { useParams } from "next/navigation";
+import BookingForm from "@/components/BookingForm";
+import CarCard from "@/components/CarCard";
+import { supabase } from "@/lib/supabase";
 
 export default function CarDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [car, setCar] = useState<CarProps | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  // Gallery active index
+  const [activeThumb, setActiveThumb] = useState(0);
 
   useEffect(() => {
-    if (params.id) {
-      // Pre-compute car IDs for better performance
+    async function loadCar() {
+      if (!params?.id) return;
       const carId = params.id as string;
-      let foundCar: CarProps | null = null;
-      
-      // More efficient search - break early when found
-      for (let index = 0; index < cars.length; index++) {
-        const c = cars[index];
-        const computedId = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, '-')}-${c.year}-${index}`;
-        if (computedId === carId) {
-          foundCar = c;
-          break;
+      setLoading(true);
+
+      try {
+        const isUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            carId
+          );
+
+        // 1. If valid UUID, query Supabase directly by id
+        if (isUuid) {
+          const { data, error } = await supabase
+            .from("cars")
+            .select("*")
+            .eq("id", carId)
+            .maybeSingle();
+
+          if (data && !error) {
+            setCar(data as CarProps);
+            setLoading(false);
+            return;
+          }
         }
+
+        // 2. Query all active cars from Supabase to match slug / make / model
+        const { data: dbCars, error: dbError } = await supabase
+          .from("cars")
+          .select("*")
+          .neq("status", "hidden");
+
+        if (dbCars && !dbError && dbCars.length > 0) {
+          // Check by computed slug match or make/model match
+          const matchedCar = dbCars.find((c: any) => {
+            const slugPrefix = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, "-")}`;
+            return (
+              c.id === carId ||
+              carId.toLowerCase().startsWith(slugPrefix) ||
+              (carId.toLowerCase().includes(c.make.toLowerCase()) &&
+                carId.toLowerCase().includes(c.model.toLowerCase().replace(/\s+/g, "-")))
+            );
+          });
+
+          if (matchedCar) {
+            setCar(matchedCar as CarProps);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // 3. Fallback: check static cars (legacy slug match)
+        for (let index = 0; index < cars.length; index++) {
+          const c = cars[index];
+          const computedId = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, "-")}-${c.year}-${index}`;
+          if (computedId === carId || carId.toLowerCase().includes(c.model.toLowerCase().replace(/\s+/g, "-"))) {
+            setCar(c as CarProps);
+            break;
+          }
+        }
+      } catch (err) {
+        console.error("Error loading car details:", err);
+      } finally {
+        setLoading(false);
       }
-      
-      setCar(foundCar);
-      setLoading(false);
     }
-  }, [params.id]);
+    loadCar();
+  }, [params?.id]);
+
+  const relatedCars: CarProps[] = useMemo(() => {
+    if (!car) return [];
+    return (cars as CarProps[]).filter((c) => c.make !== car.make).slice(0, 3);
+  }, [car]);
+
+  const handleShare = () => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading car details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5937E0] mx-auto mb-4"></div>
+          <p className="text-[#6C757D] font-medium text-sm">Loading vehicle details...</p>
         </div>
       </div>
     );
@@ -50,10 +118,16 @@ export default function CarDetailPage() {
 
   if (!car) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Car not found</h1>
-          <Link href="/fleet" className="text-blue-600 hover:text-blue-800">
+      <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center pt-24">
+        <div className="text-center bg-white p-10 rounded-[20px] border border-[#E5E7EB] shadow-sm max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-[#000000] mb-2">Vehicle Not Found</h1>
+          <p className="text-[#6C757D] text-sm mb-6">
+            The vehicle listing you are looking for is unavailable or may have been updated.
+          </p>
+          <Link
+            href="/fleet"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-[50px] bg-[#5937E0] text-white text-sm font-semibold hover:bg-[#4A2CC7] transition-all shadow-md"
+          >
             ← Back to Fleet
           </Link>
         </div>
@@ -61,140 +135,99 @@ export default function CarDetailPage() {
     );
   }
 
-  const carImages = [getCarImage(car)];
-
-  const features = [
-    { label: "Fuel Type", value: car.fuel_type.charAt(0).toUpperCase() + car.fuel_type.slice(1) },
-    { label: "Transmission", value: car.transmission === 'a' ? 'Automatic' : 'Manual' },
-    { label: "Drive Type", value: car.drive.toUpperCase() },
-    { label: "Seats", value: `${car.seats} seats` },
-    { label: "City MPG", value: `${car.city_mpg} MPG` },
-    { label: "Highway MPG", value: `${car.highway_mpg} MPG` },
-    { label: "Combined MPG", value: `${car.combination_mpg} MPG` },
-    { label: "Engine", value: `${car.displacement}L ${car.cylinders}-cylinder` },
-    { label: "Class", value: car.class },
-    { label: "Color", value: car.color },
-  ];
+  const isRented = car.status === "rented";
+  const mainCarImage = getCarImage(car);
+  const galleryImages = (car.images && car.images.length > 0) ? car.images : [mainCarImage, mainCarImage, mainCarImage];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-100 pt-20">
-      {/* Modern Hero Section */}
-      <div className="relative bg-gradient-to-r from-white via-blue-50/30 to-white overflow-hidden">
-        {/* Decorative Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-100/40 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-16 -left-24 w-64 h-64 bg-indigo-100/30 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative max-width padding-x py-12">
-          {/* Enhanced Breadcrumb */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-full px-6 py-3 mb-8 inline-flex items-center space-x-3 shadow-sm border border-gray-100">
-            <Link href="/" className="text-gray-600 hover:text-primary-blue transition-colors font-medium">
+    <main className="w-full pt-[104px] bg-[#F8F8FB] text-[#000000] min-h-screen pb-24">
+      {/* 1. Contextual Strip with Breadcrumbs */}
+      <section className="w-full bg-white border-b border-[#E5E7EB] py-6">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-16 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-semibold text-[#6C757D]">
+            <Link href="/" className="hover:text-[#5937E0] transition-colors">
               Home
             </Link>
-            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-            <Link href="/fleet" className="text-gray-600 hover:text-primary-blue transition-colors font-medium">
+            <span>/</span>
+            <Link href="/fleet" className="hover:text-[#5937E0] transition-colors">
               Fleet
             </Link>
-            <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-            <span className="text-gray-900 font-semibold">
+            <span>/</span>
+            <span className="text-[#000000] font-bold">
               {car.make} {car.model}
             </span>
-          </div>
-          
-          {/* Enhanced Header */}
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-3">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                    {car.year}
-                  </span>
-                  <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">
-                    {car.class}
-                  </span>
-                </div>
-                <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight">
-                  {car.make} <span className="text-primary-blue">{car.model}</span>
-                </h1>
-                <p className="text-xl text-gray-600 leading-relaxed max-w-2xl">
-                  Experience premium {car.fuel_type === 'electricity' ? 'electric' : car.fuel_type === 'hybrid' ? 'hybrid' : 'performance'} driving with this exceptional {car.class.toLowerCase()}
-                </p>
-              </div>
-              
-              {/* Feature Highlights */}
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-100">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">{car.fuel_type.charAt(0).toUpperCase() + car.fuel_type.slice(1)}</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-100">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">{car.seats} Seats</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-100">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-700">{car.transmission === 'a' ? 'Automatic' : 'Manual'}</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Price Card */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100 min-w-[280px]">
-              <div className="text-center space-y-2">
-                <p className="text-sm text-gray-600 font-medium">Starting from</p>
-                <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-4xl font-bold text-gray-900">${car.price_per_day}</span>
-                  <span className="text-lg text-gray-600 font-medium">/day</span>
-                </div>
-                <p className="text-xs text-gray-500">Includes insurance & roadside assistance</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Bottom Wave */}
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden">
-          <svg className="relative block w-full h-8" viewBox="0 0 1200 120" preserveAspectRatio="none">
-            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" className="fill-gray-50"></path>
-          </svg>
-        </div>
-      </div>
+          </nav>
 
-      <div className="max-width padding-x py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Modern Image Gallery */}
-          <div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              <div className="relative h-96 bg-gray-100">
+          <div className="flex items-center gap-3">
+            {isRented ? (
+              <div className="px-3.5 py-1.5 rounded-full bg-[#181524] text-white text-xs font-bold uppercase tracking-wider">
+                Currently Rented
+              </div>
+            ) : (
+              <div className="px-3.5 py-1.5 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Available Now
+              </div>
+            )}
+            <button
+              onClick={handleShare}
+              className="px-4 py-2 rounded-full border border-[#E5E7EB] bg-[#F8F8FB] text-xs font-bold text-[#000000] hover:bg-[#EEEDF9] transition-all"
+            >
+              {copiedShare ? "Link Copied!" : "Share Vehicle"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Primary Showcase Section */}
+      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          {/* Left Column: Image stage & Thumbnail Gallery */}
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm relative overflow-hidden flex flex-col">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
+                    {car.class || "Sedan"}
+                  </span>
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-[#000000] tracking-tight">
+                    {car.make} {car.model}
+                  </h1>
+                </div>
+                <div className="text-right">
+                  <span className="text-3xl font-extrabold text-[#FFA000] block">
+                    {car.price_per_day} DH
+                  </span>
+                  <span className="text-xs text-[#6C757D]">per day</span>
+                </div>
+              </div>
+
+              {/* Main Image Stage */}
+              <div className="relative w-full h-[320px] sm:h-[400px] bg-[#F8F8FB] rounded-2xl flex items-center justify-center p-6 my-4">
                 <Image
-                  src={carImages[currentImageIndex]}
+                  src={galleryImages[activeThumb] || mainCarImage}
                   alt={`${car.make} ${car.model}`}
                   fill
                   priority
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  quality={75}
-                  className="object-contain"
+                  className="object-contain p-4 transition-transform duration-500"
                 />
               </div>
-              
-              {/* Thumbnail Navigation */}
-              <div className="flex p-4 space-x-2">
-                {carImages.map((image, index) => (
+
+              {/* Thumbnail Angles */}
+              <div className="grid grid-cols-3 gap-4 pt-2">
+                {galleryImages.slice(0, 3).map((img, idx) => (
                   <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`relative w-20 h-16 rounded-md overflow-hidden border-2 transition-colors ${
-                      currentImageIndex === index ? 'border-blue-500' : 'border-gray-200'
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveThumb(idx)}
+                    className={`relative h-24 rounded-xl overflow-hidden border-2 transition-all p-2 bg-[#F8F8FB] ${
+                      activeThumb === idx ? "border-[#5937E0] shadow-md" : "border-[#E5E7EB] opacity-70 hover:opacity-100"
                     }`}
                   >
                     <Image
-                      src={image}
-                      alt={`View ${index + 1}`}
+                      src={img}
+                      alt={`Angle ${idx + 1}`}
                       fill
-                      sizes="80px"
-                      quality={55}
-                      className="object-contain bg-gray-50"
+                      className="object-contain p-2"
                     />
                   </button>
                 ))}
@@ -202,115 +235,150 @@ export default function CarDetailPage() {
             </div>
           </div>
 
-          {/* Modern Car Details */}
-          <div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-8">
+          {/* Right Column: Technical Specifications & Rent a car Button */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm">
+              <h2 className="text-xl font-bold text-[#000000] mb-6">
+                Technical Specification
+              </h2>
 
-              {/* Key Stats */}
-              <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-gray-50 rounded-lg">
-                <div className="text-center">
-                  <div className="flex justify-center mb-2">
-                    <Image src="/gas.svg" width={24} height={24} alt="fuel" />
-                  </div>
-                  <p className="text-sm text-gray-600">City MPG</p>
-                  <p className="font-semibold">{car.city_mpg}</p>
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                  <span className="text-xs text-[#6C757D] block mb-1">Gearbox</span>
+                  <span className="text-sm font-bold text-[#000000]">
+                    {car.transmission === "a" ? "Automatic" : "Manual"}
+                  </span>
                 </div>
-                <div className="text-center">
-                  <div className="flex justify-center mb-2">
-                    <Image src="/steering-wheel.svg" width={24} height={24} alt="transmission" />
-                  </div>
-                  <p className="text-sm text-gray-600">Transmission</p>
-                  <p className="font-semibold">{car.transmission === 'a' ? 'Auto' : 'Manual'}</p>
+
+                <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                  <span className="text-xs text-[#6C757D] block mb-1">Fuel Type</span>
+                  <span className="text-sm font-bold text-[#000000] capitalize">
+                    {car.fuel_type || "Gasoline"}
+                  </span>
                 </div>
-                <div className="text-center">
-                  <div className="flex justify-center mb-2">
-                    <Image src="/tire.svg" width={24} height={24} alt="drive" />
-                  </div>
-                  <p className="text-sm text-gray-600">Drive</p>
-                  <p className="font-semibold">{car.drive.toUpperCase()}</p>
+
+                <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                  <span className="text-xs text-[#6C757D] block mb-1">Passengers</span>
+                  <span className="text-sm font-bold text-[#000000]">
+                    {car.seats || 5} Seats
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                  <span className="text-xs text-[#6C757D] block mb-1">Mileage Policy</span>
+                  <span className="text-sm font-bold text-[#000000]">
+                    {car.km_policy || "Unlimited"}
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                  <span className="text-xs text-[#6C757D] block mb-1">Security Deposit</span>
+                  <span className="text-sm font-bold text-[#000000]">
+                    {car.deposit_amount ? `${car.deposit_amount} DH` : "3,000 DH"}
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                  <span className="text-xs text-[#6C757D] block mb-1">Model Year</span>
+                  <span className="text-sm font-bold text-[#000000]">
+                    {car.year}
+                  </span>
                 </div>
               </div>
 
-              {/* Description */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">About this car</h2>
-                <p className="text-gray-600 leading-relaxed">
-                  The {car.year} {car.make} {car.model} is a {car.class} that combines 
-                  {car.fuel_type === 'electricity' ? ' zero-emission electric power' : 
-                   car.fuel_type === 'hybrid' ? ' efficient hybrid technology' : ' reliable performance'} 
-                  with modern comfort and style. 
-                  {car.fuel_type === 'electricity' ? 
-                    ` With an impressive ${car.city_mpg} MPGe city rating, this electric vehicle offers both environmental benefits and cost savings.` :
-                    ` Achieving ${car.city_mpg} MPG in the city and ${car.highway_mpg} MPG on the highway, it's designed for both efficiency and performance.`
-                  }
-                </p>
-              </div>
+              {/* Main CTA: Rent a car or Rented state */}
+              {isRented ? (
+                <div className="mb-8 p-4 rounded-2xl bg-[#F1F1F6] border border-[#E5E7EB] text-center">
+                  <span className="block text-sm font-bold text-black mb-1">
+                    Currently Rented
+                  </span>
+                  <p className="text-xs text-[#6C757D] mb-3">
+                    This vehicle is currently on the road and unavailable for reservation.
+                  </p>
+                  <Link
+                    href="/fleet"
+                    className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white font-bold text-xs transition-all shadow-sm"
+                  >
+                    Browse Available Fleet →
+                  </Link>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsBookingModalOpen(true)}
+                  className="w-full h-14 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] text-white font-bold text-base shadow-[0_8px_24px_rgba(89,55,224,0.3)] transition-all flex items-center justify-center gap-2 mb-8 cursor-pointer hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
+                >
+                  <span>Rent a car</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              )}
 
-              {/* Features Grid */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Specifications</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                  {features.map((feature, index) => (
-                    <div key={index} className="flex justify-between items-center py-3 px-4 bg-gray-50 rounded-lg">
-                      <span className="text-gray-600 text-sm font-medium">{feature.label}</span>
-                      <span className="font-semibold text-gray-900 text-sm">{feature.value}</span>
+              {/* Car Equipment & Features Checklist */}
+              <div className="pt-6 border-t border-[#E5E7EB]">
+                <h3 className="text-base font-bold text-[#000000] mb-4">
+                  Car Equipment & Comfort
+                </h3>
+
+                <div className="grid grid-cols-2 gap-3 text-xs text-[#000000]">
+                  {[
+                    "Air Conditioning",
+                    "Bluetooth & USB",
+                    "GPS Navigation",
+                    "Keyless Entry",
+                    "Cruise Control",
+                    "Parking Sensors",
+                    "Heated Seats",
+                    "Apple CarPlay / Android Auto",
+                  ].map((feature) => (
+                    <div key={feature} className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-[#5937E0] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>{feature}</span>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-4">
-                <button 
-                  onClick={() => setIsBookingFormOpen(true)}
-                  className="w-full py-[16px] px-6 rounded-full bg-blue-900 text-white text-[14px] leading-[17px] font-bold hover:bg-blue-800 transition-colors [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))]"
-                >
-                  Book Now - ${car.price_per_day}/day
-                </button>
-                <button className="w-full py-[16px] px-6 rounded-full border border-gray-300 text-gray-700 text-[14px] leading-[17px] font-bold hover:bg-gray-50 transition-colors">
-                  Contact for Details
-                </button>
-              </div>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Additional Information */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Rental Terms */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Rental Information</h3>
-            <ul className="space-y-2 text-gray-600">
-              <li>• Minimum age: 21 years</li>
-              <li>• Valid driver's license required</li>
-              <li>• Credit card for security deposit</li>
-              <li>• Full insurance coverage included</li>
-              <li>• 24/7 roadside assistance</li>
-              <li>• Free cancellation up to 24 hours</li>
-            </ul>
+      {/* 3. Related Vehicles Section */}
+      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-16">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
+              Explore More
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#000000] tracking-tight">
+              Choose the car that suits you
+            </h2>
           </div>
-
-          {/* Why Choose This Car */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Why Choose This Car</h3>
-            <ul className="space-y-2 text-gray-600">
-              <li>• {car.fuel_type === 'electricity' ? 'Eco-friendly electric power' : car.fuel_type === 'hybrid' ? 'Fuel-efficient hybrid technology' : 'Reliable and efficient performance'}</li>
-              <li>• Comfortable seating for {car.seats} passengers</li>
-              <li>• Modern safety features and technology</li>
-              <li>• {car.transmission === 'a' ? 'Smooth automatic transmission' : 'Engaging manual transmission'}</li>
-              <li>• Excellent fuel economy ratings</li>
-              <li>• Well-maintained and regularly serviced</li>
-            </ul>
-          </div>
+          <Link
+            href="/fleet"
+            className="text-xs font-bold text-[#5937E0] hover:underline hidden sm:block"
+          >
+            View all cars →
+          </Link>
         </div>
-      </div>
-      
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {relatedCars.map((related, idx) => (
+            <CarCard key={related.id || `${related.make}-${related.model}-${idx}`} car={related} index={idx} />
+          ))}
+        </div>
+      </section>
+
       {/* Booking Form Modal */}
-      <BookingForm 
-        car={car}
-        isOpen={isBookingFormOpen}
-        onClose={() => setIsBookingFormOpen(false)}
-      />
-    </div>
+      {isBookingModalOpen && (
+        <BookingForm
+          car={car}
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+        />
+      )}
+    </main>
   );
 }

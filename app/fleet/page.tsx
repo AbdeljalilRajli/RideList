@@ -1,398 +1,356 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { cars as initialCars } from "@/constants";
+import { CarProps } from "@/types";
 import CarCard from "@/components/CarCard";
-import SearchBar from "@/components/SearchBar";
-import CustomFilter from "@/components/CustomFilter";
-import { fuels, yearsOfProduction, cars, transmissionTypes, priceRanges, seatOptions } from "@/constants";
-import { CarProps } from "@/types/index";
+import { useSearchParams } from "next/navigation";
+import Reveal from "@/components/Reveal";
+import { supabase } from "@/lib/supabase";
 
 export default function FleetPage() {
-  const [allCars, setAllCars] = useState<CarProps[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Search states
-  const [manufacturer, setManuFacturer] = useState("");
-  const [model, setModel] = useState("");
-
-  // Filter states
-  const [fuel, setFuel] = useState("");
-  const [year, setYear] = useState("");
-  const [transmission, setTransmission] = useState("");
-  const [priceRange, setPriceRange] = useState("");
-  const [seats, setSeats] = useState("");
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [carsPerPage] = useState(12);
-
-  // Memoized available models for selected manufacturer
-  const availableModels = useMemo(() => {
-    if (!manufacturer) return [];
-    const models = cars
-      .filter(car => car.make.toLowerCase().includes(manufacturer.toLowerCase()))
-      .map(car => car.model);
-    return Array.from(new Set(models));
-  }, [manufacturer]);
-
-  // Memoized filtered cars to prevent unnecessary re-calculations
-  const filteredCars = useMemo(() => {
-    let filtered = cars;
-    
-    // Filter by manufacturer
-    if (manufacturer) {
-      filtered = filtered.filter(car => 
-        car.make.toLowerCase().includes(manufacturer.toLowerCase())
-      );
-    }
-    
-    // Filter by model
-    if (model) {
-      filtered = filtered.filter(car => 
-        car.model.toLowerCase().includes(model.toLowerCase())
-      );
-    }
-    
-    // Filter by fuel type
-    if (fuel) {
-      filtered = filtered.filter(car => 
-        car.fuel_type.toLowerCase() === fuel.toLowerCase()
-      );
-    }
-    
-    // Filter by year
-    if (year) {
-      filtered = filtered.filter(car => car.year.toString() === year);
-    }
-
-    // Filter by transmission
-    if (transmission) {
-      filtered = filtered.filter(car => car.transmission === transmission);
-    }
-
-    // Filter by price range
-    if (priceRange) {
-      const [min, max] = priceRange.split('-').map(p => p.replace('+', ''));
-      if (max) {
-        filtered = filtered.filter(car => 
-          car.price_per_day >= parseInt(min) && car.price_per_day <= parseInt(max)
-        );
-      } else {
-        filtered = filtered.filter(car => car.price_per_day >= parseInt(min));
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5937E0]"></div>
+        </div>
       }
-    }
+    >
+      <FleetContent />
+    </Suspense>
+  );
+}
 
-    // Filter by seats
-    if (seats) {
-      if (seats === "7") {
-        filtered = filtered.filter(car => car.seats >= 7);
-      } else {
-        filtered = filtered.filter(car => car.seats === parseInt(seats));
-      }
-    }
-    
-    return filtered;
-  }, [manufacturer, model, fuel, year, transmission, priceRange, seats]);
+const brandLogos = [
+  { name: "BMW", src: "/Brands Logos/BMW.png", alt: "BMW logo", width: 110, height: 108, query: "BMW" },
+  { name: "Mercedes-Benz", src: "/Brands Logos/Mercides.png", alt: "Mercedes-Benz logo", width: 110, height: 108, query: "Mercedes" },
+  { name: "Audi", src: "/Brands Logos/Audi.png", alt: "Audi logo", width: 248, height: 84, query: "Audi" },
+  { name: "Toyota", src: "/Brands Logos/Toyota.png", alt: "Toyota logo", width: 164, height: 108, query: "Toyota" },
+  { name: "Ford", src: "/Brands Logos/Ford.png", alt: "Ford logo", width: 230, height: 88, query: "Ford" },
+  { name: "Jeep", src: "/Brands Logos/Jeep.png", alt: "Jeep logo", width: 218, height: 88, query: "Jeep" },
+];
 
-  const clearFilters = () => {
-    setManuFacturer("");
-    setModel("");
-    setFuel("");
-    setYear("");
-    setTransmission("");
-    setPriceRange("");
-    setSeats("");
-  };
+function FleetContent() {
+  const searchParams = useSearchParams();
+  const initialFuel = searchParams.get("fuel") || "";
+  const initialQuery = searchParams.get("query") || searchParams.get("city") || "";
 
-  // Clear model when manufacturer changes
+  // Supabase Cars State
+  const [carsList, setCarsList] = useState<CarProps[]>(initialCars);
+  const [loadingCars, setLoadingCars] = useState(true);
+
+  // Search & Filter States
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [transmission, setTransmission] = useState<string>("all");
+  const [fuelType, setFuelType] = useState<string>(initialFuel || "all");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 9;
+
   useEffect(() => {
-    if (manufacturer) {
-      if (model && !availableModels.includes(model)) {
-        setModel("");
+    async function loadCars() {
+      try {
+        const { data, error } = await supabase
+          .from("cars")
+          .select("*")
+          .neq("status", "hidden")
+          .order("created_at", { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          setCarsList(data as CarProps[]);
+        }
+      } catch (err) {
+        console.error("Error loading cars from Supabase:", err);
+      } finally {
+        setLoadingCars(false);
       }
-    } else {
-      setModel("");
     }
-  }, [manufacturer, availableModels]); // Removed 'model' to prevent circular dependency
-  
-  useEffect(() => {
-    setAllCars(cars);
-    setLoading(false);
+    loadCars();
   }, []);
 
-  // Reset to first page when filters change
-  useEffect(() => {
+  const vehicleCategories = [
+    { label: "All Vehicles", value: "all" },
+    { label: "Sedan", value: "sedan" },
+    { label: "Cabriolet", value: "cabriolet" },
+    { label: "Pickup", value: "pickup" },
+    { label: "SUV", value: "suv" },
+    { label: "Minivan", value: "minivan" },
+  ];
+
+  // Filtered cars
+  const filteredCars = useMemo(() => {
+    return carsList.filter((car) => {
+      // Hidden cars never show
+      if (car.status === "hidden") return false;
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = `${car.make} ${car.model}`.toLowerCase().includes(q);
+        const matchesClass = (car.class || "").toLowerCase().includes(q);
+        if (!matchesName && !matchesClass) return false;
+      }
+
+      // Type
+      if (selectedType !== "all") {
+        const cClass = (car.class || "").toLowerCase();
+        if (selectedType === "sedan" && !(cClass.includes("compact") || cClass.includes("midsize") || cClass.includes("sedan"))) return false;
+        if (selectedType === "suv" && !cClass.includes("suv")) return false;
+        if (selectedType === "minivan" && !(cClass.includes("van") || cClass.includes("minivan") || car.seats >= 7)) return false;
+        if (selectedType === "pickup" && !cClass.includes("pickup") && !cClass.includes("truck")) return false;
+        if (selectedType === "cabriolet" && !(cClass.includes("convertible") || car.price_per_day >= 700)) return false;
+      }
+
+      // Transmission
+      if (transmission !== "all" && car.transmission !== transmission) {
+        return false;
+      }
+
+      // Fuel
+      if (fuelType !== "all") {
+        const f = (car.fuel_type || "").toLowerCase();
+        if (fuelType === "hybrid" && !(f.includes("hybrid") || f.includes("electric"))) return false;
+        if (fuelType === "gas" && (f.includes("hybrid") || f.includes("electric"))) return false;
+      }
+
+      return true;
+    });
+  }, [carsList, searchQuery, selectedType, transmission, fuelType]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredCars.length / itemsPerPage) || 1;
+  const paginatedCars = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredCars.slice(start, start + itemsPerPage);
+  }, [filteredCars, currentPage]);
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setSelectedType("all");
+    setTransmission("all");
+    setFuelType("all");
     setCurrentPage(1);
-  }, [manufacturer, model, fuel, year, transmission, priceRange, seats]);
-
-  // Pagination logic
-  const indexOfLastCar = currentPage * carsPerPage;
-  const indexOfFirstCar = indexOfLastCar - carsPerPage;
-  const currentCars = filteredCars.slice(indexOfFirstCar, indexOfLastCar);
-  const totalPages = Math.ceil(filteredCars.length / carsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-100 pt-20">
-      {/* Modern Header Section */}
-      <div className="relative bg-gradient-to-r from-white via-blue-50/50 to-white">
-        {/* Decorative Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-32 w-96 h-96 bg-blue-100/30 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-20 -left-32 w-80 h-80 bg-indigo-100/20 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative max-width padding-x py-16">
-          {/* Breadcrumb Navigation */}
-          <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">
-            <Link href="/" className="hover:text-blue-600 transition-colors">
-              Home
-            </Link>
-            <span className="text-gray-300">›</span>
-            <span className="text-gray-900 font-medium">Fleet</span>
-          </nav>
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-4">
-              <h1 className="text-5xl font-extrabold text-gray-900 leading-tight">
-                Our <span className="text-primary-blue">Fleet</span>
-              </h1>
-              <p className="text-xl text-gray-600 max-w-2xl leading-relaxed">
-                Discover the perfect car for your journey from our premium collection of vehicles
-              </p>
-              <div className="flex items-center space-x-4 pt-2">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Premium Selection</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Instant Booking</span>
-                </div>
-              </div>
-            </div>
-            
-            <Link 
-              href="/" 
-              className="hidden lg:flex items-center space-x-2 px-6 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full hover:bg-white hover:shadow-lg transition-all duration-300"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span className="font-medium">Back to Home</span>
-            </Link>
-          </div>
-        </div>
-        
-        {/* Bottom Wave Divider */}
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden">
-          <svg className="relative block w-full h-12" viewBox="0 0 1200 120" preserveAspectRatio="none">
-            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25" className="fill-gray-50"></path>
-            <path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5" className="fill-gray-50"></path>
-            <path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z" className="fill-gray-50"></path>
-          </svg>
-        </div>
-      </div>
+    <main className="min-h-screen bg-[#F8F8FB] text-[#000000] pt-[104px] pb-24">
+      {/* Header Banner (Figma Template style) */}
+      <section className="bg-white border-b border-[#E5E7EB] py-14">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-16 text-center">
+          <Reveal triggerOnLoad delay={0}>
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-[#000000] tracking-tight mb-3">
+              Select a vehicle group
+            </h1>
+          </Reveal>
+          <Reveal triggerOnLoad delay={80}>
+            <p className="text-[#6C757D] text-sm sm:text-base font-normal">
+              <Link href="/" className="hover:text-[#5937E0] transition-colors">
+                Home
+              </Link>{" "}
+              / <span className="text-[#000000] font-semibold">Fleet</span>
+            </p>
+          </Reveal>
 
-      <div className="max-width padding-x py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Modern Sidebar Filters */}
-          <div className="lg:w-1/4">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-8 sticky top-28">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-semibold text-gray-900">Filters</h2>
+          {/* Figma Style Vehicle Category Tabs */}
+          <Reveal triggerOnLoad delay={140}>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
+              {vehicleCategories.map((cat) => (
                 <button
-                  onClick={clearFilters}
-                  className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                  key={cat.value}
+                  type="button"
+                  onClick={() => {
+                    setSelectedType(cat.value);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-6 py-3 rounded-[50px] text-xs font-bold transition-all duration-200 shadow-sm hover:-translate-y-0.5 ${
+                    selectedType === cat.value
+                      ? "bg-[#5937E0] text-white shadow-[0_4px_16px_rgba(89,55,224,0.3)]"
+                      : "bg-[#F8F8FB] border border-[#E5E7EB] text-[#000000] hover:bg-[#EEEDF9]"
+                  }`}
                 >
-                  Clear All
+                  {cat.label}
                 </button>
-              </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
-              <div className="space-y-8">
-                {/* Manufacturer Filter */}
-                <div className="relative z-[60]">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Manufacturer
-                  </label>
-                  <SearchBar
-                    setManuFacturer={setManuFacturer}
-                    setModel={setModel}
-                  />
-                </div>
+      {/* Filter and Search Bar Strip */}
+      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-8">
+        <Reveal delay={0}>
+          <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="relative w-full md:w-96">
+              <svg
+                className="w-4 h-4 text-[#6C757D] absolute left-4 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search by make or model..."
+                className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-[#000000] focus:outline-none focus:border-[#5937E0]"
+              />
+            </div>
 
-                {/* Model Filter - Updated to use dropdown */}
-                {manufacturer && (
-                  <div className="relative z-[55]">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Model
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
-                      >
-                        <option value="">All Models</option>
-                        {availableModels.map((modelName: string) => (
-                          <option key={modelName} value={modelName}>
-                            {modelName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              {/* Transmission filter */}
+              <select
+                value={transmission}
+                onChange={(e) => {
+                  setTransmission(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-[#000000] focus:outline-none"
+              >
+                <option value="all">All Transmissions</option>
+                <option value="a">Automatic</option>
+                <option value="m">Manual</option>
+              </select>
 
-                {/* Fuel Type */}
-                <div className="relative z-50">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Fuel Type
-                  </label>
-                  <CustomFilter options={fuels} setFilter={setFuel} />
-                </div>
+              {/* Fuel filter */}
+              <select
+                value={fuelType}
+                onChange={(e) => {
+                  setFuelType(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-[#000000] focus:outline-none"
+              >
+                <option value="all">All Fuel Types</option>
+                <option value="gas">Gasoline</option>
+                <option value="hybrid">Hybrid & Electric</option>
+              </select>
 
-                {/* Year */}
-                <div className="relative z-40">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Year
-                  </label>
-                  <CustomFilter options={yearsOfProduction} setFilter={setYear} />
-                </div>
-
-                {/* Transmission */}
-                <div className="relative z-30">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Transmission
-                  </label>
-                  <CustomFilter options={transmissionTypes} setFilter={setTransmission} />
-                </div>
-
-                {/* Price Range */}
-                <div className="relative z-20">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Price Range
-                  </label>
-                  <CustomFilter options={priceRanges} setFilter={setPriceRange} />
-                </div>
-
-                {/* Seats */}
-                <div className="relative z-10">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Seats
-                  </label>
-                  <CustomFilter options={seatOptions} setFilter={setSeats} />
-                </div>
-              </div>
-
-              {/* Results Count */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-900">
-                    {filteredCars.length} car{filteredCars.length !== 1 ? 's' : ''} found
-                  </p>
-                </div>
-              </div>
+              {/* Reset Button */}
+              {(searchQuery || selectedType !== "all" || transmission !== "all" || fuelType !== "all") && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="h-11 px-4 rounded-xl text-xs font-bold text-[#5937E0] hover:bg-[#EEEDF9] transition-colors"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
+        </Reveal>
+      </section>
 
-          {/* Main Content */}
-          <div className="lg:w-3/4">
-            {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading fleet...</p>
-                </div>
-              </div>
-            ) : currentCars.length > 0 ? (
-              <>
-                {/* Cars Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                  {currentCars.map((car, index) => {
-                    // Calculate the actual index in the full filtered array
-                    const actualIndex = indexOfFirstCar + index;
-                    return (
-                      <CarCard key={`${car.make}-${car.model}-${actualIndex}`} car={car} index={actualIndex} />
-                    );
-                  })}
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center space-x-3">
-                    <button
-                      onClick={() => paginate(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Previous
-                    </button>
-                    
-                    <div className="flex space-x-1">
-                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                        let page;
-                        if (totalPages <= 5) {
-                          page = i + 1;
-                        } else if (currentPage <= 3) {
-                          page = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          page = totalPages - 4 + i;
-                        } else {
-                          page = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => paginate(page)}
-                            className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
-                              currentPage === page
-                                ? 'bg-blue-900 text-white [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))]'
-                                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    
-                    <button
-                      onClick={() => paginate(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-                <div className="text-center py-12">
-                  <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No cars found</h3>
-                  <p className="text-gray-600 mb-4">
-                    No cars match your current filters. Try adjusting your search criteria.
-                  </p>
-                  <button
-                    onClick={clearFilters}
-                    className="py-[16px] px-6 rounded-full bg-blue-900 text-white text-[14px] leading-[17px] font-bold hover:bg-blue-800 transition-colors [background-image:radial-gradient(88%_100%_at_top,rgba(255,255,255,0.5),rgba(255,255,255,0))]"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-            )}
+      {/* Vehicles Grid */}
+      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-10">
+        {paginatedCars.length === 0 ? (
+          <Reveal delay={0}>
+            <div className="bg-white rounded-3xl p-16 text-center border border-[#E5E7EB]">
+              <h3 className="text-xl font-bold text-[#000000] mb-2">No vehicles match your criteria</h3>
+              <p className="text-[#6C757D] text-sm mb-6">
+                Try adjusting your search query, fuel type, or transmission options.
+              </p>
+              <button
+                onClick={resetFilters}
+                className="px-6 py-3 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] hover:-translate-y-0.5 hover:shadow-md text-white text-xs font-bold transition-all duration-200"
+              >
+                Clear all filters
+              </button>
+            </div>
+          </Reveal>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {paginatedCars.map((car, idx) => (
+              <Reveal key={car.id || `${car.make}-${car.model}-${idx}`} delay={idx * 80}>
+                <CarCard car={car} index={idx} />
+              </Reveal>
+            ))}
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-14">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              className="w-10 h-10 rounded-full border border-[#E5E7EB] bg-white flex items-center justify-center text-[#000000] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#F8F8FB] hover:-translate-y-0.5 transition-all duration-200"
+              aria-label="Previous page"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-10 h-10 rounded-full text-xs font-bold transition-all duration-200 hover:-translate-y-0.5 ${
+                  currentPage === page
+                    ? "bg-[#5937E0] text-white shadow-sm"
+                    : "bg-white border border-[#E5E7EB] text-[#000000] hover:bg-[#EEEDF9]"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              className="w-10 h-10 rounded-full border border-[#E5E7EB] bg-white flex items-center justify-center text-[#000000] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#F8F8FB] hover:-translate-y-0.5 transition-all duration-200"
+              aria-label="Next page"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Brand Logos / Strip (matching Figma frame 1:4311) */}
+      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-20 mb-8">
+        <Reveal delay={0}>
+          <div className="bg-white rounded-[24px] py-10 px-6 sm:px-12 border border-[#E5E7EB] shadow-sm text-center">
+            <p className="text-xs font-bold text-[#6C757D] uppercase tracking-widest mb-8">
+              Supported Automobile Brands
+            </p>
+            <div className="flex flex-wrap items-center justify-center sm:justify-between gap-8 sm:gap-10 lg:gap-14 px-2 sm:px-6">
+              {brandLogos.map((brand) => (
+                <button
+                  key={brand.name}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(brand.query || brand.name);
+                    window.scrollTo({ top: 400, behavior: "smooth" });
+                  }}
+                  title={`Filter by ${brand.name}`}
+                  className="h-10 sm:h-12 flex items-center justify-center group transition-transform hover:-translate-y-0.5 focus:outline-none"
+                >
+                  <Image
+                    src={brand.src}
+                    alt={brand.alt}
+                    width={brand.width}
+                    height={brand.height}
+                    unoptimized
+                    className="max-h-7 sm:max-h-9 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </section>
+    </main>
   );
 }
