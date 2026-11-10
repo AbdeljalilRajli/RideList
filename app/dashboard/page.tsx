@@ -1,482 +1,388 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import Link from 'next/link';
-import Image from 'next/image';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { cars } from '@/constants';
-import { getCarImage } from '@/lib/utils';
+import { useState, useMemo, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { getAgencyWhatsAppNumber } from "@/constants/booking";
+import { useCustomerBookings } from "@/hooks/useCustomerBookings";
+import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
 
-interface Booking {
-  id: string;
-  carId: string;
-  carMake: string;
-  carModel: string;
-  carYear?: number;
-  userId: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  pickupDate: string;
-  returnDate: string;
-  totalDays: number;
-  totalPrice: number;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  createdAt: Date;
-}
-
-const UserDashboard = () => {
-  return (
-    <ProtectedRoute>
-      <UserDashboardContent />
-    </ProtectedRoute>
-  );
-};
-
-const UserDashboardContent = () => {
-  const { user, userData, loading } = useAuth();
+export default function CustomerDashboardPage() {
   const router = useRouter();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loadingBookings, setLoadingBookings] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'confirmed' | 'pending' | 'completed'>('all');
-  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const { user, userData, isAdmin, loading: authLoading } = useAuth();
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pending" | "confirmed" | "completed" | "cancelled" | "rejected"
+  >("all");
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Redirect if not logged in
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
+    if (!authLoading && !user) {
+      router.replace("/login");
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserBookings();
-    }
-  }, [user]);
+  // Unified Customer Bookings Hook with Supabase Realtime & optimistic cancellation
+  const {
+    bookings,
+    loading: loadingBookings,
+    isRefreshing,
+    lastUpdated,
+    cancellingId,
+    stats,
+    refresh,
+    cancelBooking,
+  } = useCustomerBookings(user);
 
-  const fetchUserBookings = async () => {
+  // Customer cancel pending booking with optimistic rollback
+  const handleCancelBooking = async (
+    bookingId: string,
+    referenceCode: string
+  ) => {
+    const confirmCancel = window.confirm(
+      `Are you sure you want to cancel booking request ${referenceCode}?`
+    );
+    if (!confirmCancel) return;
+
     try {
-      let bookingsQuery = query(
-        collection(db, 'bookings'),
-        where('userId', '==', user?.uid)
-      );
-
-      let snapshot = await getDocs(bookingsQuery);
-      let bookingsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as Booking[];
-
-      if (bookingsData.length === 0 && user?.email) {
-        bookingsQuery = query(
-          collection(db, 'bookings'),
-          where('customerEmail', '==', user.email)
-        );
-        snapshot = await getDocs(bookingsQuery);
-        bookingsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-        })) as Booking[];
-      }
-
-      bookingsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      setBookings(bookingsData);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    } finally {
-      setLoadingBookings(false);
+      await cancelBooking(bookingId);
+      showToast(`Reservation ${referenceCode} has been cancelled.`);
+    } catch (err: any) {
+      console.error("Error cancelling booking:", err);
+      showToast(err.message || "Failed to cancel reservation.");
     }
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm("Are you sure you want to cancel this reservation? Full free cancellation is honored.")) {
-      return;
-    }
-    try {
-      await updateDoc(doc(db, "bookings", bookingId), {
-        status: "cancelled",
-      });
-      setBookings((prev) =>
-        prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" } : b))
-      );
-    } catch (err) {
-      console.error("Failed to cancel booking:", err);
-    }
-  };
+  // In-memory instant filtering
+  const filteredBookings = useMemo(() => {
+    if (statusFilter === "all") return bookings;
+    return bookings.filter((b) => b.status === statusFilter);
+  }, [bookings, statusFilter]);
 
-  if (loading) {
+  const agencyPhone = getAgencyWhatsAppNumber();
+
+  if (authLoading || (!user && loadingBookings)) {
     return (
       <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3730A3]"></div>
+        <div className="text-center">
+          <div className="w-10 h-10 border-3 border-[#5937E0] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#6C757D] text-sm font-medium">
+            Loading your account...
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!user) return null;
-
-  const activeBooking = bookings.find(b => b.status === 'confirmed' || b.status === 'pending');
-  const totalSpent = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-  const filteredBookings = bookings.filter(b => {
-    if (activeTab === 'all') return true;
-    return b.status === activeTab;
-  });
+  const tabs = [
+    { key: "all", label: `All (${stats.total})` },
+    { key: "pending", label: `Pending (${stats.pending})` },
+    { key: "confirmed", label: `Confirmed (${stats.confirmed})` },
+    { key: "completed", label: `Completed (${stats.completed})` },
+    { key: "cancelled", label: `Cancelled (${stats.cancelled})` },
+    { key: "rejected", label: `Rejected (${stats.rejected})` },
+  ] as const;
 
   return (
-    <main className="min-h-screen bg-[#F8F8FB] text-[#0F0F1A] pt-24 pb-20">
-      {/* Digital Key Modal */}
-      {isKeyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F0F1A]/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-[#E5E7EB]">
-            <button
-              onClick={() => setIsKeyModalOpen(false)}
-              className="absolute top-6 right-6 w-9 h-9 rounded-full bg-[#F8F8FB] border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#0F0F1A]"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
-                <span className="material-symbols-outlined">smartphone</span>
-              </div>
-              <div>
-                <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Touchless Concourse Access</span>
-                <h3 className="text-xl font-bold text-[#0F0F1A]">Digital Keyless Pass</h3>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] flex flex-col items-center justify-center text-center mb-6">
-              <div className="w-36 h-36 bg-white p-3 rounded-xl border border-[#E5E7EB] flex items-center justify-center mb-3">
-                <span className="material-symbols-outlined text-6xl text-[#3730A3]">qr_code_2</span>
-              </div>
-              <p className="font-extrabold text-lg text-[#0F0F1A] tracking-wider">RL-{user.uid.slice(0, 8).toUpperCase()}</p>
-              <p className="text-xs text-[#6B7280] mt-1">Scan at Express Concourse Reader or SFO Terminal Gate</p>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs">
-                <span className="text-[#6B7280] flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-[#3730A3]">bluetooth</span> NFC Proximity Unlock
-                </span>
-                <span className="font-bold text-[#0F0F1A]">Armed & Ready</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsKeyModalOpen(false)}
-              className="w-full h-12 rounded-full bg-[#3730A3] hover:bg-[#312E81] text-white font-bold text-sm transition-all"
-            >
-              Close Pass
-            </button>
-          </div>
+    <main className="min-h-screen bg-[#F8F8FB] text-black pt-[130px] sm:pt-[150px] pb-24 px-4 sm:px-6 lg:px-8 font-['Work_Sans',sans-serif]">
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 px-5 py-3.5 rounded-2xl bg-[#5937E0] text-white text-xs font-bold shadow-xl animate-fadeIn">
+          {toastMessage}
         </div>
       )}
 
-      <div className="w-full max-w-[1280px] mx-auto px-6 flex flex-col gap-10">
-        {/* 1. Top Profile & Tier Header */}
-        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2 border-b border-[#E5E7EB]">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            <div className="relative shrink-0">
-              <div className="w-20 h-20 rounded-full bg-[#3730A3] text-white flex items-center justify-center text-3xl font-extrabold shadow-md">
-                {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#3730A3] border-2 border-white flex items-center justify-center text-white" title="Verified Member">
-                <span className="material-symbols-outlined text-[16px]">verified</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0F0F1A] tracking-tight">
-                  {user.displayName || "RideList Member"}
-                </h1>
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#1E1B4B] text-white text-xs font-bold tracking-wide">
-                  <span className="material-symbols-outlined text-[14px] text-indigo-300">stars</span>
-                  {userData?.role === 'admin' ? "ADMINISTRATOR TIER" : "EXECUTIVE TIER"}
-                </span>
-              </div>
-              <p className="text-sm text-[#6B7280] flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span>{user.email}</span>
-                <span className="w-1 h-1 rounded-full bg-[#E5E7EB]"></span>
-                <span className="font-semibold text-[#0F0F1A]">#RL-MBR-{user.uid.slice(0, 6).toUpperCase()}</span>
-              </p>
-            </div>
+      <div className="max-w-5xl mx-auto">
+        {/* Customer Header Banner */}
+        <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-6 sm:p-8 mb-8 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
+              Customer Portal
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
+              Welcome, {userData?.displayName || user?.email?.split("@")[0]}
+            </h1>
+            <p className="text-xs text-[#6C757D] mt-1">
+              {user?.email} • {stats.total}{" "}
+              {stats.total === 1 ? "reservation" : "reservations"} total
+            </p>
           </div>
 
-          {/* Tier Benefits Ribbon */}
-          <div className="flex flex-wrap items-center gap-2 p-2 rounded-full bg-white border border-[#E5E7EB] self-start lg:self-center shadow-sm">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8F8FB] text-[#0F0F1A] text-xs font-semibold">
-              <span className="material-symbols-outlined text-[16px] text-[#3730A3]">group_add</span>
-              Complimentary 2nd Driver
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8F8FB] text-[#0F0F1A] text-xs font-semibold">
-              <span className="material-symbols-outlined text-[16px] text-[#3730A3]">key</span>
-              Touchless Express Pass
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8F8FB] text-[#0F0F1A] text-xs font-semibold">
-              <span className="material-symbols-outlined text-[16px] text-[#3730A3]">percent</span>
-              10% Bonus Credits
-            </div>
-          </div>
-        </header>
+          <div className="flex flex-wrap items-center gap-3">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="px-4 py-2 rounded-full bg-[#EEEDF9] text-[#5937E0] hover:bg-[#5937E0] hover:text-white text-xs font-bold transition-all shadow-xs"
+              >
+                Go to Admin Portal →
+              </Link>
+            )}
 
-        {/* 2. KPI Metrics Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Active Bookings</span>
-              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[20px]">directions_car</span>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold text-[#0F0F1A]">
-                  {bookings.filter(b => b.status === 'confirmed').length} Active
-                </span>
-              </div>
-              <p className="text-xs text-[#6B7280] mt-1">Ready for scheduled dispatch</p>
-            </div>
-          </div>
+            <Link
+              href="/profile"
+              className="px-4 py-2 rounded-full border border-[#E5E7EB] bg-white hover:bg-[#EEEDF9] text-black hover:text-[#5937E0] text-xs font-bold transition-all shadow-2xs"
+            >
+              Edit Profile
+            </Link>
 
-          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Trip Velocity</span>
-              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[20px]">route</span>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold text-[#0F0F1A]">{bookings.length} Trips</span>
-                <span className="text-xs font-semibold text-emerald-600">100% On-time</span>
-              </div>
-              <p className="text-xs text-[#6B7280] mt-1">Lifetime booking ledger</p>
-            </div>
-          </div>
+            <Link
+              href="/fleet"
+              className="px-4 py-2 rounded-full bg-[#EEEDF9] text-[#5937E0] hover:bg-[#5937E0] hover:text-white text-xs font-bold transition-all shadow-xs"
+            >
+              Browse Fleet →
+            </Link>
 
-          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Total Investment</span>
-              <div className="w-10 h-10 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[20px]">stars</span>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold text-[#0F0F1A]">${totalSpent}</span>
-                <span className="text-xs font-bold text-[#3730A3]">USD</span>
-              </div>
-              <p className="text-xs text-[#6B7280] mt-1">Direct corporate savings enabled</p>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Account Clearance</span>
-              <div className="w-10 h-10 rounded-full bg-[#DCFCE7] text-emerald-600 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[20px]">verified</span>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-extrabold text-[#0F0F1A]">Verified</span>
-                <span className="material-symbols-outlined text-[20px] text-emerald-600">check_circle</span>
-              </div>
-              <p className="text-xs text-[#6B7280] mt-1">License & payment profile active</p>
-            </div>
+            <Link
+              href="/fleet"
+              className="px-5 py-2 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
+            >
+              + Book Another Vehicle
+            </Link>
           </div>
         </div>
 
-        {/* 3. Active Reservation Focus Card (if one exists) */}
-        {activeBooking && (
-          <div className="w-full bg-white rounded-3xl border border-[#E5E7EB] shadow-md overflow-hidden relative p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E5E7EB]">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1E1B4B] text-white text-xs font-bold tracking-wide">
-                  <span className="w-2 h-2 rounded-full bg-[#3730A3] animate-ping"></span>
-                  CURRENT ACTIVE RESERVATION
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#3730A3] text-xs font-bold">
-                  <span className="material-symbols-outlined text-[15px]">check_circle</span>
-                  Status: {activeBooking.status.toUpperCase()}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#6B7280]">Booking Ref:</span>
-                <code className="px-2.5 py-1 rounded-full bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-bold text-[#0F0F1A]">
-                  RL-{activeBooking.id.slice(0, 8).toUpperCase()}
-                </code>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-6">
-              <div className="lg:col-span-5 flex flex-col gap-3">
-                <h2 className="text-2xl font-extrabold text-[#0F0F1A]">
-                  {activeBooking.carMake} {activeBooking.carModel}
-                </h2>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#6B7280]">Total Duration: {activeBooking.totalDays} Days</span>
-                  <span className="text-xl font-extrabold text-[#FFA000]">${activeBooking.totalPrice}</span>
-                </div>
-              </div>
-
-              <div className="lg:col-span-7 flex flex-col gap-4">
-                <div className="p-4 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider block mb-1">Pick-up</span>
-                    <p className="text-sm font-bold text-[#0F0F1A]">{activeBooking.pickupDate}</p>
-                    <p className="text-xs text-[#6B7280]">Express Airport Terminal</p>
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider block mb-1">Return</span>
-                    <p className="text-sm font-bold text-[#0F0F1A]">{activeBooking.returnDate}</p>
-                    <p className="text-xs text-[#6B7280]">Standard return concourse</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => setIsKeyModalOpen(true)}
-                    className="h-12 px-6 rounded-full bg-[#3730A3] hover:bg-[#1E1B4B] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">qr_code_2</span>
-                    Digital Key & Kiosk Pass
-                  </button>
-                  <Link
-                    href="/fleet"
-                    className="h-12 px-5 rounded-full bg-[#F8F8FB] border border-[#E5E7EB] text-[#0F0F1A] hover:bg-white font-semibold text-xs flex items-center justify-center transition-colors"
-                  >
-                    Book Additional Vehicle
-                  </Link>
-                  <button
-                    onClick={() => handleCancelBooking(activeBooking.id)}
-                    className="h-12 px-5 rounded-full bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">cancel</span>
-                    Cancel Trip
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 4. Rental History Ledger */}
-        <section className="p-6 sm:p-8 rounded-3xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">Trip Archives</span>
-              <h3 className="text-2xl font-bold text-[#0F0F1A]">Rental History</h3>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-[#F8F8FB] border border-[#E5E7EB] rounded-full self-start sm:self-auto">
-              {[
-                { label: `All Trips (${bookings.length})`, value: 'all' },
-                { label: 'Confirmed', value: 'confirmed' },
-                { label: 'Pending', value: 'pending' },
-                { label: 'Completed', value: 'completed' },
-              ].map(tab => (
+        {/* Action Bar: Filter Tabs on Left, Live Status on Right */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          {/* Left: Filter Tabs with room to breathe */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            {loadingBookings ? (
+              <>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    className="h-8 w-20 bg-gray-100 rounded-full animate-pulse shrink-0"
+                  ></div>
+                ))}
+              </>
+            ) : (
+              tabs.map((tab) => (
                 <button
-                  key={tab.value}
-                  onClick={() => setActiveTab(tab.value as any)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    activeTab === tab.value
-                      ? 'bg-white text-[#0F0F1A] shadow-sm border border-[#E5E7EB]'
-                      : 'text-[#6B7280] hover:text-[#0F0F1A]'
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.key)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                    statusFilter === tab.key
+                      ? "bg-[#5937E0] text-white shadow-xs"
+                      : "bg-white border border-[#E5E7EB] text-[#6C757D] hover:bg-[#EEEDF9] hover:text-[#5937E0]"
                   }`}
                 >
                   {tab.label}
                 </button>
-              ))}
-            </div>
+              ))
+            )}
           </div>
 
-          {loadingBookings ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3730A3] mx-auto mb-2"></div>
-              <p className="text-xs text-[#6B7280]">Loading booking ledger...</p>
-            </div>
-          ) : filteredBookings.length === 0 ? (
-            <div className="text-center py-16 bg-[#F8F8FB] rounded-2xl border border-[#E5E7EB] p-8">
-              <div className="w-14 h-14 rounded-full bg-[#EEEDF9] text-[#3730A3] flex items-center justify-center mx-auto mb-3">
-                <span className="material-symbols-outlined text-2xl">receipt_long</span>
-              </div>
-              <h4 className="text-lg font-bold text-[#0F0F1A] mb-1">No Bookings In This Category</h4>
-              <p className="text-xs text-[#6B7280] max-w-sm mx-auto mb-4">
-                You haven&apos;t made any reservations matching this filter yet. Explore our curated fleet to book your next trip.
-              </p>
-              <Link
-                href="/fleet"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#3730A3] text-white text-xs font-bold hover:bg-[#312E81] transition-all shadow-sm"
+          {/* Right: Live Realtime Status & Manual Refresh */}
+          <div className="shrink-0 flex items-center justify-end">
+            <DataFreshnessBadge
+              isRefreshing={isRefreshing}
+              lastUpdated={lastUpdated}
+              onRefresh={refresh}
+            />
+          </div>
+        </div>
+
+        {/* Bookings List */}
+        {loadingBookings ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-[24px] border border-[#E5E7EB] p-6 shadow-xs animate-pulse space-y-4"
               >
-                Explore Fleet
-              </Link>
+                <div className="flex justify-between items-center pb-4 border-b border-[#E5E7EB]">
+                  <div className="h-5 bg-gray-200 rounded w-28"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-14 bg-gray-200 rounded-xl"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-48"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredBookings.length === 0 ? (
+          <div className="p-16 text-center bg-white rounded-[24px] border border-[#E5E7EB] shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-[#EEEDF9] text-[#5937E0] flex items-center justify-center mx-auto mb-3">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
+              </svg>
             </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {filteredBookings.map(booking => (
+            <h3 className="text-base font-bold text-black mb-1">
+              No Reservations Found
+            </h3>
+            <p className="text-xs text-[#6C757D] mb-4 max-w-sm mx-auto">
+              {statusFilter !== "all"
+                ? `You have no reservations currently marked as ${statusFilter}.`
+                : "You haven't made any bookings with this account yet. Choose a vehicle from our fleet to get started."}
+            </p>
+            <Link
+              href="/fleet"
+              className="inline-block px-6 py-2.5 rounded-full bg-[#5937E0] text-white text-xs font-bold"
+            >
+              Explore Our Fleet
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredBookings.map((b) => {
+              const carThumb =
+                (Array.isArray(b.cars?.images) && b.cars?.images[0]) ||
+                "/logo-icon.png";
+
+              return (
                 <div
-                  key={booking.id}
-                  className="p-5 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] hover:border-[#3730A3]/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  key={b.id}
+                  className="bg-white rounded-[24px] border border-[#E5E7EB] p-6 shadow-xs hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#3730A3] shrink-0">
-                      <span className="material-symbols-outlined text-2xl">directions_car</span>
-                    </div>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E5E7EB]">
+                    {/* Reference & Date */}
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-base font-bold text-[#0F0F1A]">
-                          {booking.carMake} {booking.carModel}
-                        </h4>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize ${
-                          booking.status === 'confirmed'
-                            ? 'bg-[#DCFCE7] text-emerald-700'
-                            : booking.status === 'pending'
-                            ? 'bg-[#EEEDF9] text-[#3730A3]'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {booking.status}
+                      <span className="text-[11px] font-bold text-[#6C757D] uppercase tracking-wider block">
+                        Reference Code
+                      </span>
+                      <span className="text-lg font-mono font-black text-[#5937E0]">
+                        {b.reference_code}
+                      </span>
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className="flex items-center gap-3">
+                      {b.status === "pending" && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                          Pending Review
                         </span>
-                      </div>
-                      <span className="text-xs text-[#6B7280]">
-                        {booking.pickupDate} – {booking.returnDate} • {booking.totalDays} Days Rental
-                      </span>
-                      <span className="text-sm font-extrabold text-[#FFA000] block mt-1">
-                        ${booking.totalPrice} Total
-                      </span>
+                      )}
+                      {b.status === "confirmed" && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          Confirmed & Scheduled
+                        </span>
+                      )}
+                      {b.status === "completed" && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          Completed
+                        </span>
+                      )}
+                      {b.status === "cancelled" && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-bold">
+                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                          Cancelled
+                        </span>
+                      )}
+                      {b.status === "rejected" && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 border border-gray-300 text-gray-800 text-xs font-bold">
+                          <span className="w-2 h-2 rounded-full bg-gray-500"></span>
+                          Declined
+                        </span>
+                      )}
+
+                      {/* Cancel button if pending */}
+                      {b.status === "pending" && (
+                        <button
+                          onClick={() =>
+                            handleCancelBooking(b.id, b.reference_code)
+                          }
+                          disabled={cancellingId === b.id}
+                          className="px-3 py-1 rounded-full border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {cancellingId === b.id
+                            ? "Cancelling..."
+                            : "Cancel Request"}
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    {(booking.status === "confirmed" || booking.status === "pending") && (
-                      <button
-                        onClick={() => handleCancelBooking(booking.id)}
-                        className="h-9 px-4 rounded-full bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition-all"
+                  {/* Body Content */}
+                  <div className="pt-4 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    {/* Car Info */}
+                    <div className="md:col-span-5 flex items-center gap-4">
+                      <div className="relative w-20 h-14 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] overflow-hidden shrink-0">
+                        <Image
+                          src={carThumb}
+                          alt={`${b.cars?.make} ${b.cars?.model}`}
+                          fill
+                          unoptimized
+                          className="object-contain p-1"
+                        />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-black text-sm">
+                          {b.cars?.make} {b.cars?.model} ({b.cars?.year})
+                        </h4>
+                        <span className="text-xs font-extrabold text-[#5937E0] block mt-0.5">
+                          {b.total_price} DH{" "}
+                          <span className="font-normal text-[#6C757D] text-[11px]">
+                            (Pay at pickup)
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Schedule */}
+                    <div className="md:col-span-4 space-y-1 text-xs">
+                      <div>
+                        <span className="text-[#6C757D]">Pickup: </span>
+                        <strong className="text-black">
+                          {b.pickup_date} ({b.pickup_time})
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-[#6C757D]">Return: </span>
+                        <strong className="text-black">
+                          {b.return_date} ({b.return_time})
+                        </strong>
+                      </div>
+                      <div className="text-[11px] text-[#6C757D] truncate">
+                        Location: {b.pickup_place}
+                      </div>
+                    </div>
+
+                    {/* WhatsApp Assist */}
+                    <div className="md:col-span-3 text-right">
+                      <a
+                        href={`https://wa.me/${agencyPhone}?text=${encodeURIComponent(
+                          `Bonjour RideList! Je vous contacte concernant ma réservation ${b.reference_code}.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
                       >
-                        Cancel
-                      </button>
-                    )}
-                    <Link
-                      href="/fleet"
-                      className="h-9 px-4 rounded-full bg-[#3730A3] text-white text-xs font-bold hover:bg-[#1E1B4B] transition-all flex items-center gap-1"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">replay</span>
-                      Book Again
-                    </Link>
+                        <span>WhatsApp Help</span>
+                        <span>→</span>
+                      </a>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              );
+            })}
+          </div>
+        )}
       </div>
     </main>
   );
-};
-
-export default UserDashboard;
+}
