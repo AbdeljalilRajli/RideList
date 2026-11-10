@@ -8,7 +8,6 @@ export function NewsLetter() {
 
   const handleSubscribe = () => {
     if (!email) return;
-    console.log(`Subscribed: ${email}`);
     setSubmitted(true);
     setEmail("");
     setTimeout(() => setSubmitted(false), 3000);
