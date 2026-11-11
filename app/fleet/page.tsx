@@ -128,6 +128,99 @@ function FleetContent() {
   });
   const itemsPerPage = 9;
 
+  // Ref to the results container for accessible smooth scrolling
+  const resultsContainerRef = useRef<HTMLElement>(null);
+  const isInitialMount = useRef(true);
+  const prevPageRef = useRef(currentPage);
+
+  const scrollToResults = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (resultsContainerRef.current) {
+      resultsContainerRef.current.scrollIntoView({
+        behavior: prefersReduced ? "auto" : "smooth",
+        block: "start",
+      });
+      resultsContainerRef.current.focus({ preventScroll: true });
+    }
+  }, []);
+
+  // Smooth-scroll to top of list when page changes (not on first load, respects prefers-reduced-motion)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return;
+    }
+    if (prevPageRef.current !== currentPage) {
+      prevPageRef.current = currentPage;
+      scrollToResults();
+    }
+  }, [currentPage, scrollToResults]);
+
+  // Mobile: also scroll to top of results when a filter or sort changes
+  const prevFiltersRef = useRef({
+    type: selectedType,
+    segment: selectedSegment,
+    seats: selectedSeats,
+    transmission,
+    fuel: fuelType,
+    sort: sortOption,
+    minPrice,
+    maxPrice,
+    onlyAvailable,
+    debouncedQuery,
+  });
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const prev = prevFiltersRef.current;
+    const hasFilterChanged =
+      prev.type !== selectedType ||
+      prev.segment !== selectedSegment ||
+      prev.seats !== selectedSeats ||
+      prev.transmission !== transmission ||
+      prev.fuel !== fuelType ||
+      prev.sort !== sortOption ||
+      prev.minPrice !== minPrice ||
+      prev.maxPrice !== maxPrice ||
+      prev.onlyAvailable !== onlyAvailable ||
+      prev.debouncedQuery !== debouncedQuery;
+
+    if (hasFilterChanged) {
+      prevFiltersRef.current = {
+        type: selectedType,
+        segment: selectedSegment,
+        seats: selectedSeats,
+        transmission,
+        fuel: fuelType,
+        sort: sortOption,
+        minPrice,
+        maxPrice,
+        onlyAvailable,
+        debouncedQuery,
+      };
+
+      if (typeof window !== "undefined" && window.innerWidth < 768) {
+        scrollToResults();
+      }
+    }
+  }, [
+    selectedType,
+    selectedSegment,
+    selectedSeats,
+    transmission,
+    fuelType,
+    sortOption,
+    minPrice,
+    maxPrice,
+    onlyAvailable,
+    debouncedQuery,
+    scrollToResults,
+  ]);
+
   // Mobile drawer state
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
@@ -484,8 +577,8 @@ function FleetContent() {
           </Reveal>
 
           {/* Dynamic Body Type Filter Chips (Horizontal scroll on mobile) */}
-          <Reveal triggerOnLoad delay={140}>
-            <div className="flex items-center gap-2 mt-8 overflow-x-auto no-scrollbar py-2 px-1 justify-start sm:justify-center">
+          <Reveal triggerOnLoad delay={140} className="w-full max-w-full overflow-hidden min-w-0">
+            <div className="flex items-center gap-2 mt-8 overflow-x-auto no-scrollbar py-2 px-1 justify-start sm:justify-center w-full max-w-full">
               {loadingCars && dynamicBodyTypes.length <= 1 ? (
                 <>
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -952,7 +1045,12 @@ function FleetContent() {
       </section>
 
       {/* Vehicles Grid Section */}
-      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16 mt-8">
+      <section
+        ref={resultsContainerRef}
+        tabIndex={-1}
+        aria-label="Available Vehicles"
+        className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16 mt-8 scroll-mt-24 sm:scroll-mt-28 outline-none"
+      >
         {loadingCars ? (
           /* Skeleton Loading Cards */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -1045,7 +1143,13 @@ function FleetContent() {
                       <button
                         key={pageNum}
                         type="button"
-                        onClick={() => setCurrentPage(pageNum)}
+                        onClick={() => {
+                          if (currentPage === pageNum) {
+                            scrollToResults();
+                          } else {
+                            setCurrentPage(pageNum);
+                          }
+                        }}
                         className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                           currentPage === pageNum
                             ? "bg-[#5937E0] text-white shadow-sm"

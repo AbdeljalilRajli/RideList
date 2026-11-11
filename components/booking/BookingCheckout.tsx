@@ -369,7 +369,7 @@ export default function BookingCheckout({
                         min={todayStr}
                         value={pickupDate}
                         onChange={(e) => setPickupDate(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
 
@@ -383,7 +383,7 @@ export default function BookingCheckout({
                         required
                         value={pickupTime}
                         onChange={(e) => setPickupTime(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
 
@@ -398,7 +398,7 @@ export default function BookingCheckout({
                         min={pickupDate || todayStr}
                         value={returnDate}
                         onChange={(e) => setReturnDate(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
 
@@ -412,7 +412,7 @@ export default function BookingCheckout({
                         required
                         value={returnTime}
                         onChange={(e) => setReturnTime(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
                   </div>
@@ -439,7 +439,7 @@ export default function BookingCheckout({
                     <select
                       value={pickupPlaceId}
                       onChange={(e) => setPickupPlaceId(e.target.value)}
-                      className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
                     >
                       {RENTAL_LOCATIONS.map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -455,7 +455,7 @@ export default function BookingCheckout({
                         placeholder="Enter your hotel name, riad or address in Morocco *"
                         value={pickupCustomAddress}
                         onChange={(e) => setPickupCustomAddress(e.target.value)}
-                        className="w-full h-11 mt-2 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 mt-2 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     )}
                   </div>
@@ -468,7 +468,7 @@ export default function BookingCheckout({
                     <select
                       value={returnPlaceId}
                       onChange={(e) => setReturnPlaceId(e.target.value)}
-                      className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
                     >
                       {RENTAL_LOCATIONS.map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -484,7 +484,7 @@ export default function BookingCheckout({
                         placeholder="Enter return hotel name or address in Morocco *"
                         value={returnCustomAddress}
                         onChange={(e) => setReturnCustomAddress(e.target.value)}
-                        className="w-full h-11 mt-2 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 mt-2 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     )}
                   </div>
@@ -678,7 +678,7 @@ export default function BookingCheckout({
                         placeholder="e.g. Youssef El Amrani"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
 
@@ -693,7 +693,7 @@ export default function BookingCheckout({
                         placeholder="+212 6 12 34 56 78"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
 
@@ -707,7 +707,7 @@ export default function BookingCheckout({
                         placeholder="name@example.com"
                         value={customerEmail}
                         onChange={(e) => setCustomerEmail(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
 
@@ -721,7 +721,7 @@ export default function BookingCheckout({
                         placeholder="e.g. Morocco, France, Spain"
                         value={customerCountry}
                         onChange={(e) => setCustomerCountry(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-xs text-black focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs text-black focus:outline-none focus:border-[#5937E0]"
                       />
                     </div>
                   </div>
@@ -736,7 +736,7 @@ export default function BookingCheckout({
                       placeholder="e.g. Flight AT 204 arriving at 14:30, please meet us outside Terminal 2."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full p-3 rounded-xl bg-white border border-[#E5E7EB] text-xs text-black focus:outline-none focus:border-[#5937E0]"
+                      className="w-full p-3 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs text-black focus:outline-none focus:border-[#5937E0] min-h-[44px]"
                     ></textarea>
                   </div>
                 </div>

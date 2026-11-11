@@ -185,20 +185,28 @@ export default function CarDetailPage() {
           {/* Left Column: Image stage & Thumbnail Gallery */}
           <div className="lg:col-span-7 flex flex-col gap-6">
             <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm relative overflow-hidden flex flex-col">
-              <div className="flex items-start justify-between mb-4">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+                <div className="min-w-0">
                   <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
                     {car.class || "Sedan"}
                   </span>
-                  <h1 className="text-3xl sm:text-4xl font-extrabold text-[#000000] tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#000000] tracking-tight break-words">
                     {car.make} {car.model}
                   </h1>
+                  {/* Mobile stacked price under title */}
+                  <div className="flex items-baseline gap-2 mt-2 sm:hidden">
+                    <span className="text-2xl font-extrabold text-[#FFA000] whitespace-nowrap">
+                      {car.price_per_day} DH
+                    </span>
+                    <span className="text-xs text-[#6C757D] whitespace-nowrap font-medium">per day</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-3xl font-extrabold text-[#FFA000] block">
+                {/* Desktop right-aligned price */}
+                <div className="hidden sm:block text-right shrink-0">
+                  <span className="text-3xl font-extrabold text-[#FFA000] block whitespace-nowrap">
                     {car.price_per_day} DH
                   </span>
-                  <span className="text-xs text-[#6C757D]">per day</span>
+                  <span className="text-xs text-[#6C757D] whitespace-nowrap">per day</span>
                 </div>
               </div>
 
@@ -364,7 +372,7 @@ export default function CarDetailPage() {
 
       {/* 3. Related Vehicles Section */}
       <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-16">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col items-start gap-2.5 sm:flex-row sm:items-end sm:justify-between mb-8">
           <div>
             <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
               Explore More
@@ -375,9 +383,12 @@ export default function CarDetailPage() {
           </div>
           <Link
             href="/fleet"
-            className="text-xs font-bold text-[#5937E0] hover:underline hidden sm:block"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#5937E0] hover:underline whitespace-nowrap"
           >
-            View all cars →
+            <span>View all cars</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+            </svg>
           </Link>
         </div>
 

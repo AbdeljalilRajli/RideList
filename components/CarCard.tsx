@@ -85,10 +85,10 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
             </p>
           </div>
           <div className="text-right shrink-0">
-            <span className="text-xl font-bold text-[#FFA000]">
+            <span className="text-xl font-bold text-[#FFA000] whitespace-nowrap">
               {price_per_day} DH
             </span>
-            <span className="text-[11px] text-[#6C757D] block -mt-1">
+            <span className="text-[11px] text-[#6C757D] block -mt-1 whitespace-nowrap">
               per day
             </span>
           </div>
