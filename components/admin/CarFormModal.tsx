@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { CarProps } from "@/types";
+import { CarProps, BodyType, CarSegment } from "@/types";
 import { compressAndResizeImage, formatBytes } from "@/lib/imageCompression";
 import { uploadCarImage, deleteCarImages } from "@/lib/carStorage";
 import { supabase } from "@/lib/supabase";
+import { BODY_TYPES, CAR_SEGMENTS, formatBodyType, formatSegment } from "@/lib/carTaxonomy";
 
 interface CarFormModalProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ export default function CarFormModal({
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState<number>(2024);
+  const [bodyType, setBodyType] = useState<BodyType>("sedan");
+  const [segment, setSegment] = useState<CarSegment>("midsize");
   const [carClass, setCarClass] = useState("compact car");
   const [seats, setSeats] = useState<number>(5);
   const [color, setColor] = useState("Black");
@@ -71,10 +74,48 @@ export default function CarFormModal({
         setModel(carToEdit.model || "");
         setYear(carToEdit.year || 2024);
         setCarClass(carToEdit.class || "compact car");
+
+        // Body type fallback
+        const rawBody = (carToEdit.body_type || "").toLowerCase().trim();
+        const validBody = BODY_TYPES.some((b) => b.value === rawBody)
+          ? (rawBody as BodyType)
+          : carToEdit.class?.toLowerCase().includes("suv")
+          ? "suv"
+          : carToEdit.class?.toLowerCase().includes("hatchback")
+          ? "hatchback"
+          : "sedan";
+        setBodyType(validBody);
+
+        // Segment fallback
+        const rawSeg = (carToEdit.segment || "").toLowerCase().trim();
+        const validSeg = CAR_SEGMENTS.some((s) => s.value === rawSeg)
+          ? (rawSeg as CarSegment)
+          : "midsize";
+        setSegment(validSeg);
+
         setSeats(carToEdit.seats || 5);
         setColor(carToEdit.color || "Black");
-        setFuelType(carToEdit.fuel_type || "gas");
-        setTransmission(carToEdit.transmission || "a");
+
+        // Fuel normalization
+        const normF = (carToEdit.fuel_type || "").toLowerCase().trim();
+        if (normF.includes("electr") || normF === "ev") {
+          setFuelType("electric");
+        } else if (normF.includes("diesel")) {
+          setFuelType("diesel");
+        } else if (normF.includes("hybrid")) {
+          setFuelType("hybrid");
+        } else {
+          setFuelType("gas");
+        }
+
+        // Transmission normalization
+        const normT = (carToEdit.transmission || "").toLowerCase().trim();
+        if (normT === "m" || normT.includes("manual")) {
+          setTransmission("m");
+        } else {
+          setTransmission("a");
+        }
+
         setPricePerDay(carToEdit.price_per_day || 500);
         setDepositAmount(carToEdit.deposit_amount ?? 3000);
         setKmPolicy(carToEdit.km_policy || "Unlimited");
@@ -107,6 +148,8 @@ export default function CarFormModal({
         setMake("");
         setModel("");
         setYear(2024);
+        setBodyType("sedan");
+        setSegment("midsize");
         setCarClass("compact car");
         setSeats(5);
         setColor("Black");
@@ -237,7 +280,9 @@ export default function CarFormModal({
         make: make.trim(),
         model: model.trim(),
         year: Number(year),
-        class: carClass.trim(),
+        body_type: bodyType,
+        segment: segment,
+        class: carClass.trim() || `${formatSegment(segment)} ${formatBodyType(bodyType)}`,
         seats: Number(seats),
         color: color.trim(),
         fuel_type: fuelType,
@@ -512,23 +557,47 @@ export default function CarFormModal({
                 />
               </div>
 
+              {/* Body Type (Required Dropdown) */}
               <div>
-                <label className="block text-xs font-bold text-black mb-1">Category / Class</label>
-                <input
-                  type="text"
-                  placeholder="e.g. compact car, midsize SUV, luxury"
-                  value={carClass}
-                  onChange={(e) => setCarClass(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
-                />
+                <label className="block text-xs font-bold text-black mb-1">Body Type *</label>
+                <select
+                  required
+                  value={bodyType}
+                  onChange={(e) => setBodyType(e.target.value as BodyType)}
+                  className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black font-semibold focus:outline-none focus:border-[#5937E0]"
+                >
+                  {BODY_TYPES.map((bt) => (
+                    <option key={bt.value} value={bt.value}>
+                      {bt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Vehicle Segment (Required Dropdown) */}
+              <div>
+                <label className="block text-xs font-bold text-black mb-1">Vehicle Segment *</label>
+                <select
+                  required
+                  value={segment}
+                  onChange={(e) => setSegment(e.target.value as CarSegment)}
+                  className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black font-semibold focus:outline-none focus:border-[#5937E0]"
+                >
+                  {CAR_SEGMENTS.map((seg) => (
+                    <option key={seg.value} value={seg.value}>
+                      {seg.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-black mb-1">Seats</label>
+                <label className="block text-xs font-bold text-black mb-1">Seats *</label>
                 <input
                   type="number"
-                  min={2}
-                  max={9}
+                  required
+                  min={1}
+                  max={15}
                   value={seats}
                   onChange={(e) => setSeats(Number(e.target.value))}
                   className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
@@ -542,6 +611,17 @@ export default function CarFormModal({
                   placeholder="e.g. Black, White, Silver"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
+                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-black mb-1">Legacy Category / Class</label>
+                <input
+                  type="text"
+                  placeholder="e.g. compact car, midsize SUV"
+                  value={carClass}
+                  onChange={(e) => setCarClass(e.target.value)}
                   className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
                 />
               </div>
@@ -610,11 +690,11 @@ export default function CarFormModal({
             <h3 className="text-sm font-bold text-black mb-3">Transmission & Technical Specs</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-bold text-black mb-1">Transmission</label>
+                <label className="block text-xs font-bold text-black mb-1">Transmission *</label>
                 <select
                   value={transmission}
                   onChange={(e) => setTransmission(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                  className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black font-medium focus:outline-none focus:border-[#5937E0]"
                 >
                   <option value="a">Automatic</option>
                   <option value="m">Manual</option>
@@ -622,16 +702,16 @@ export default function CarFormModal({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-black mb-1">Fuel Type</label>
+                <label className="block text-xs font-bold text-black mb-1">Fuel Type *</label>
                 <select
                   value={fuelType}
                   onChange={(e) => setFuelType(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                  className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black font-medium focus:outline-none focus:border-[#5937E0]"
                 >
-                  <option value="gas">Gas / Petrol</option>
+                  <option value="gas">Petrol</option>
                   <option value="diesel">Diesel</option>
                   <option value="hybrid">Hybrid</option>
-                  <option value="electricity">Electricity / EV</option>
+                  <option value="electric">Electric</option>
                 </select>
               </div>
 

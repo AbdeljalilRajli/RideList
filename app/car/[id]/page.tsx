@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { cars } from "@/constants";
 import { CarProps } from "@/types";
 import { getCarImage } from "@/lib/utils";
+import { normalizeFuel, normalizeTransmission, formatBodyType, formatSegment } from "@/lib/carTaxonomy";
 import BookingForm from "@/components/BookingForm";
 import CarCard from "@/components/CarCard";
 import { supabase } from "@/lib/supabase";
@@ -243,17 +244,33 @@ export default function CarDetailPage() {
               </h2>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
+                {car.body_type && (
+                  <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                    <span className="text-xs text-[#6C757D] block mb-1">Body Type</span>
+                    <span className="text-sm font-bold text-[#000000]">
+                      {formatBodyType(car.body_type)}
+                    </span>
+                  </div>
+                )}
+                {car.segment && (
+                  <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
+                    <span className="text-xs text-[#6C757D] block mb-1">Vehicle Segment</span>
+                    <span className="text-sm font-bold text-[#000000]">
+                      {formatSegment(car.segment)}
+                    </span>
+                  </div>
+                )}
                 <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
                   <span className="text-xs text-[#6C757D] block mb-1">Gearbox</span>
                   <span className="text-sm font-bold text-[#000000]">
-                    {car.transmission === "a" ? "Automatic" : "Manual"}
+                    {normalizeTransmission(car.transmission)}
                   </span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB]">
                   <span className="text-xs text-[#6C757D] block mb-1">Fuel Type</span>
                   <span className="text-sm font-bold text-[#000000] capitalize">
-                    {car.fuel_type || "Gasoline"}
+                    {normalizeFuel(car.fuel_type)}
                   </span>
                 </div>
 

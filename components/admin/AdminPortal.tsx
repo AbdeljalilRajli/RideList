@@ -13,6 +13,7 @@ import BookingTable from "@/components/admin/BookingTable";
 import UserDropdown from "@/components/auth/UserDropdown";
 import { useAdminData } from "@/hooks/useAdminData";
 import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
+import { formatBodyType, formatSegment, normalizeFuel, normalizeTransmission } from "@/lib/carTaxonomy";
 
 interface AdminPortalProps {
   initialTab?: "fleet" | "bookings";
@@ -149,7 +150,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
   const filteredCars = useMemo(() => {
     return cars.filter((car) => {
       const matchesSearch =
-        `${car.make} ${car.model} ${car.year} ${car.class || ""}`
+        `${car.make} ${car.model} ${car.year} ${car.body_type || ""} ${car.segment || ""} ${car.class || ""}`
           .toLowerCase()
           .includes(searchQuery.toLowerCase().trim());
 
@@ -657,14 +658,16 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
 
                             {/* 2. Specs */}
                             <td className="py-4 px-6">
-                              <span className="font-semibold text-black text-xs capitalize block">
-                                {car.class || "Sedan"}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-[#EEEDF9] text-[#5937E0] font-bold text-[11px]">
+                                  {formatBodyType(car.body_type)}
+                                </span>
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 font-semibold text-[11px] capitalize">
+                                  {formatSegment(car.segment)}
+                                </span>
+                              </div>
                               <span className="text-xs text-[#6C757D] block">
-                                {car.transmission === "a"
-                                  ? "Automatic"
-                                  : "Manual"}{" "}
-                                • {car.fuel_type} • {car.seats || 5} seats
+                                {normalizeTransmission(car.transmission)} • {normalizeFuel(car.fuel_type)} • {car.seats || 5} seats
                               </span>
                             </td>
 

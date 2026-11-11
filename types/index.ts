@@ -1,9 +1,29 @@
 import { MouseEventHandler } from "react";
 
+export type BodyType =
+  | "sedan"
+  | "hatchback"
+  | "suv"
+  | "minivan"
+  | "pickup"
+  | "convertible"
+  | "coupe"
+  | "van";
+
+export type CarSegment =
+  | "economy"
+  | "compact"
+  | "midsize"
+  | "fullsize"
+  | "premium"
+  | "luxury";
+
 export interface CarProps {
   id?: string;
   city_mpg: number;
   class: string;
+  body_type?: BodyType;
+  segment?: CarSegment;
   combination_mpg: number;
   cylinders: number;
   displacement: number;
