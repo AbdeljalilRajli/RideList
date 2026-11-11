@@ -20,16 +20,38 @@ const brandLogos = [
 export default function ContactPage() {
   const router = useRouter();
 
-  // Booking Form State
-  const [carType, setCarType] = useState("all");
-  const [rentalPlace, setRentalPlace] = useState("");
-  const [returnPlace, setReturnPlace] = useState("");
-  const [rentalDate, setRentalDate] = useState("");
-  const [returnDate, setReturnDate] = useState("");
+  // Contact Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: "",
+  });
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(`/fleet?type=${carType}${rentalPlace ? `&city=${encodeURIComponent(rentalPlace)}` : ""}`);
+    setIsSubmitting(true);
+    // Simulate contact form submission
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+      });
+    }, 600);
   };
 
   return (
@@ -56,103 +78,137 @@ export default function ContactPage() {
       </section>
 
       {/* =========================================================================
-          2. BOOKING FORM & HERO PHOTOGRAPHY SPLIT SECTION
+          2. CONTACT FORM & HERO PHOTOGRAPHY SPLIT SECTION
          ========================================================================= */}
       <section className="max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 py-12 sm:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          {/* Left: Purple "Book your car" Card */}
+          {/* Left: Purple "Get in touch" Contact Form Card */}
           <div className="lg:col-span-5 w-full flex">
             <Reveal delay={0} className="w-full h-full">
-              <div className="w-full h-full rounded-[28px] sm:rounded-[32px] bg-[#5937E0] text-white p-7 sm:p-9 shadow-xl flex flex-col justify-between">
+              <div className="w-full h-full rounded-[28px] sm:rounded-[32px] bg-[#5937E0] text-white p-6 sm:p-9 shadow-xl flex flex-col justify-between">
                 <div>
-                  <h2 className="text-2xl sm:text-[26px] font-bold text-white text-center mb-6 font-['Work_Sans',sans-serif]">
-                    Book your car
+                  <h2 className="text-2xl sm:text-[26px] font-bold text-white text-center mb-2 font-['Work_Sans',sans-serif]">
+                    Get in touch
                   </h2>
+                  <p className="text-white/80 text-xs sm:text-sm text-center mb-6">
+                    Have a question or special request? Send us a message and our team will get back to you promptly.
+                  </p>
 
-                  <form onSubmit={handleBookingSubmit} className="flex flex-col gap-3.5">
-                    {/* Field 1: Car Type */}
-                    <div className="relative">
-                      <select
-                        value={carType}
-                        onChange={(e) => setCarType(e.target.value)}
-                        className="w-full h-12 px-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-white appearance-none cursor-pointer transition-colors"
+                  {isSubmitted ? (
+                    <div className="bg-white/15 border border-white/30 rounded-2xl p-6 text-center my-6 animate-fadeIn">
+                      <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center mx-auto mb-3 shadow-md">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-1">Message Sent!</h3>
+                      <p className="text-xs sm:text-sm text-white/90">
+                        Thank you for reaching out. We will contact you shortly.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsSubmitted(false)}
+                        className="mt-4 px-6 py-2 rounded-full bg-white text-[#5937E0] text-xs font-bold hover:bg-white/90 transition-colors cursor-pointer"
                       >
-                        <option value="all" className="text-black">Car type</option>
-                        <option value="sedan" className="text-black">Sedan</option>
-                        <option value="cabriolet" className="text-black">Cabriolet</option>
-                        <option value="pickup" className="text-black">Pickup</option>
-                        <option value="suv" className="text-black">SUV</option>
-                        <option value="minivan" className="text-black">Minivan</option>
-                      </select>
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/70">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        Send another message
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
+                      {/* Name */}
+                      <div>
+                        <label htmlFor="contact-name" className="block text-xs font-semibold text-white/90 mb-1.5">
+                          Full Name <span className="text-[#FFA000]">*</span>
+                        </label>
+                        <input
+                          id="contact-name"
+                          type="text"
+                          name="name"
+                          required
+                          placeholder="e.g. John Doe"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className="w-full h-12 px-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-[16px] sm:text-sm font-medium text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-colors"
+                        />
                       </div>
-                    </div>
 
-                    {/* Field 2: Place of rental */}
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Place of rental"
-                        value={rentalPlace}
-                        onChange={(e) => setRentalPlace(e.target.value)}
-                        className="w-full h-12 pl-4 pr-10 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-colors"
-                      />
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/70">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                      {/* Email & Phone 2-col on sm+ */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="contact-email" className="block text-xs font-semibold text-white/90 mb-1.5">
+                            Email Address <span className="text-[#FFA000]">*</span>
+                          </label>
+                          <input
+                            id="contact-email"
+                            type="email"
+                            name="email"
+                            required
+                            placeholder="name@example.com"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            className="w-full h-12 px-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-[16px] sm:text-sm font-medium text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="contact-phone" className="block text-xs font-semibold text-white/90 mb-1.5">
+                            Phone Number
+                          </label>
+                          <input
+                            id="contact-phone"
+                            type="tel"
+                            name="phone"
+                            placeholder="+212 6 000 000 00"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            className="w-full h-12 px-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-[16px] sm:text-sm font-medium text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-colors"
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Field 3: Place of return */}
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Place of return"
-                        value={returnPlace}
-                        onChange={(e) => setReturnPlace(e.target.value)}
-                        className="w-full h-12 pl-4 pr-10 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-colors"
-                      />
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/70">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                      {/* Subject */}
+                      <div>
+                        <label htmlFor="contact-subject" className="block text-xs font-semibold text-white/90 mb-1.5">
+                          Subject <span className="text-[#FFA000]">*</span>
+                        </label>
+                        <input
+                          id="contact-subject"
+                          type="text"
+                          name="subject"
+                          required
+                          placeholder="Rental inquiry, partnership, question..."
+                          value={formData.subject}
+                          onChange={handleInputChange}
+                          className="w-full h-12 px-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-[16px] sm:text-sm font-medium text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-colors"
+                        />
                       </div>
-                    </div>
 
-                    {/* Field 4: Rental date */}
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={rentalDate}
-                        onChange={(e) => setRentalDate(e.target.value)}
-                        className="w-full h-12 px-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-white transition-colors"
-                      />
-                    </div>
+                      {/* Message */}
+                      <div>
+                        <label htmlFor="contact-message" className="block text-xs font-semibold text-white/90 mb-1.5">
+                          Your Message <span className="text-[#FFA000]">*</span>
+                        </label>
+                        <textarea
+                          id="contact-message"
+                          name="message"
+                          required
+                          rows={3}
+                          placeholder="How can we assist you today? Feel free to provide details..."
+                          value={formData.message}
+                          onChange={handleInputChange}
+                          className="w-full p-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-[16px] sm:text-sm font-medium text-white placeholder:text-white/60 focus:outline-none focus:border-white transition-colors resize-none min-h-[96px]"
+                        ></textarea>
+                      </div>
 
-                    {/* Field 5: Return date */}
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={returnDate}
-                        onChange={(e) => setReturnDate(e.target.value)}
-                        className="w-full h-12 px-4 rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium text-white focus:outline-none focus:border-white transition-colors"
-                      />
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
-                      className="w-full h-12 mt-2 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] text-white font-bold text-sm shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center cursor-pointer"
-                    >
-                      Book now
-                    </button>
-                  </form>
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full h-12 mt-1 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] text-white font-bold text-sm shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center cursor-pointer disabled:opacity-60"
+                      >
+                        {isSubmitting ? "Sending..." : "Send Message"}
+                      </button>
+                    </form>
+                  )}
                 </div>
               </div>
             </Reveal>
@@ -179,39 +235,46 @@ export default function ContactPage() {
       </section>
 
       {/* =========================================================================
-          3. CONTACT DETAILS STRIP (4 Info Cards in a Row)
+          3. CONTACT DETAILS STRIP (Left-aligned column on mobile, 4 in a row on desktop)
          ========================================================================= */}
       <section className="max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 py-10 sm:py-12 border-y border-[#E5E7EB]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6 items-center">
+        <div className="flex flex-col items-start gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:gap-6 sm:items-center">
           {/* Item 1: Address */}
-          <Reveal delay={0}>
-            <div className="flex items-center gap-4">
+          <Reveal delay={0} className="w-full">
+            <div className="flex items-center gap-4 w-full min-w-0">
               <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <div className="font-['Work_Sans',sans-serif]">
+              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
                 <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Address</span>
-                <span className="text-sm sm:text-base font-semibold text-black block leading-snug">Oxford Ave. Cary, NC 27511</span>
+                <a
+                  href={AGENCY_CONFIG.addressMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug break-words"
+                >
+                  {AGENCY_CONFIG.address}
+                </a>
               </div>
             </div>
           </Reveal>
 
           {/* Item 2: Email */}
-          <Reveal delay={80}>
-            <div className="flex items-center gap-4">
+          <Reveal delay={80} className="w-full">
+            <div className="flex items-center gap-4 w-full min-w-0">
               <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <div className="font-['Work_Sans',sans-serif]">
+              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
                 <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Email</span>
                 <a
                   href={AGENCY_CONFIG.emailMailto}
-                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug"
+                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug break-all"
                 >
                   {AGENCY_CONFIG.email}
                 </a>
@@ -220,18 +283,18 @@ export default function ContactPage() {
           </Reveal>
 
           {/* Item 3: Phone */}
-          <Reveal delay={160}>
-            <div className="flex items-center gap-4">
+          <Reveal delay={160} className="w-full">
+            <div className="flex items-center gap-4 w-full min-w-0">
               <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </div>
-              <div className="font-['Work_Sans',sans-serif]">
+              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
                 <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Phone</span>
                 <a
                   href={AGENCY_CONFIG.phoneTel}
-                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug"
+                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug whitespace-nowrap"
                 >
                   {AGENCY_CONFIG.phoneDisplay}
                 </a>
@@ -240,14 +303,14 @@ export default function ContactPage() {
           </Reveal>
 
           {/* Item 4: Opening hours */}
-          <Reveal delay={240}>
-            <div className="flex items-center gap-4">
+          <Reveal delay={240} className="w-full">
+            <div className="flex items-center gap-4 w-full min-w-0">
               <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="font-['Work_Sans',sans-serif]">
+              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
                 <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Opening hours</span>
                 <span className="text-sm sm:text-base font-semibold text-black block leading-snug">Sun–Mon: 10am – 10pm</span>
               </div>
