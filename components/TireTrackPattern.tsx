@@ -7,10 +7,10 @@ interface TireTrackPatternProps {
 
 export default function TireTrackPattern({ className = "", variant = "hero" }: TireTrackPatternProps) {
   return (
-    <div className={`absolute inset-0 pointer-events-none overflow-hidden ${className}`}>
+    <div className={`absolute inset-0 pointer-events-none overflow-hidden max-w-full ${className}`}>
       {/* Curved SVG Tire Tread Tracks */}
       <svg
-        className="absolute w-full h-full text-white/10"
+        className="absolute inset-0 w-full h-full text-white/10 overflow-hidden"
         viewBox="0 0 1440 660"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -26,7 +26,7 @@ export default function TireTrackPattern({ className = "", variant = "hero" }: T
 
         {/* Top-left to bottom-center curved track */}
         <path
-          d="M-100,120 C200,60 500,280 800,200 C1100,120 1300,320 1550,280"
+          d="M0,120 C200,60 500,280 800,200 C1100,120 1300,320 1440,280"
           stroke="url(#tread-pattern)"
           strokeWidth="70"
           strokeLinecap="round"
@@ -35,7 +35,7 @@ export default function TireTrackPattern({ className = "", variant = "hero" }: T
 
         {/* Second parallel curved track */}
         <path
-          d="M-60,260 C240,200 540,420 840,340 C1140,260 1340,460 1590,420"
+          d="M0,260 C240,200 540,420 840,340 C1140,260 1340,460 1440,420"
           stroke="url(#tread-pattern)"
           strokeWidth="60"
           strokeLinecap="round"

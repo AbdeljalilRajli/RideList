@@ -111,7 +111,7 @@ export default function Reveal({
   return (
     <Component
       ref={elementRef}
-      className={`reveal-base ${variantClass} ${visibleClass} ${className}`.trim()}
+      className={`reveal-base ${variantClass} ${visibleClass} max-w-full ${className}`.trim()}
       style={transitionStyle}
     >
       {children}

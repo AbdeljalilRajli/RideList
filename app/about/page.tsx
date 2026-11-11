@@ -525,11 +525,11 @@ export default function AboutPage() {
           <div className="absolute inset-0 [background-image:radial-gradient(88%_100%_at_top_left,rgba(255,255,255,0.22),transparent_65%)] pointer-events-none" />
 
           {/* Soft Modern Glow */}
-          <div className="absolute top-0 right-1/4 w-[460px] h-[340px] bg-white/10 blur-[110px] rounded-full pointer-events-none" />
+          <div className="absolute top-0 right-1/4 w-[460px] max-w-full h-[340px] bg-white/10 blur-[110px] rounded-full pointer-events-none" />
 
           {/* Noise Overlay */}
           <div
-            className="absolute inset-0 w-full h-full scale-[1.2] transform opacity-20 [mask-image:radial-gradient(#fff,transparent,85%)] pointer-events-none"
+            className="absolute inset-0 w-full h-full opacity-20 [mask-image:radial-gradient(#fff,transparent,85%)] pointer-events-none"
             style={{
               backgroundImage: "url(/noise.webp)",
               backgroundSize: "30%",
@@ -537,7 +537,7 @@ export default function AboutPage() {
           />
 
           {/* Branded Tire Track Pattern */}
-          <div className="opacity-25 pointer-events-none">
+          <div className="absolute inset-0 opacity-25 pointer-events-none overflow-hidden">
             <TireTrackPattern variant="newsletter" />
           </div>
 
@@ -594,7 +594,7 @@ export default function AboutPage() {
           <Reveal
             variant="fade-scale"
             delay={150}
-            className="hidden md:block absolute -right-16 sm:-right-24 lg:-right-28 xl:-right-36 -bottom-4 sm:-bottom-8 lg:-bottom-12 w-[540px] md:w-[620px] lg:w-[740px] xl:w-[820px] aspect-[2816/1536] pointer-events-none z-20"
+            className="hidden lg:block absolute -right-20 lg:-right-28 xl:-right-36 -bottom-4 sm:-bottom-8 lg:-bottom-12 w-[540px] md:w-[620px] lg:w-[740px] xl:w-[820px] aspect-[2816/1536] pointer-events-none z-20"
           >
             <div className="relative w-full h-full">
               <Image

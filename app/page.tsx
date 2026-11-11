@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import CarCard from "@/components/CarCard";
@@ -22,6 +22,8 @@ export default function Home() {
   const [returnPlace, setReturnPlace] = useState("");
   const [rentalDate, setRentalDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
+
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   // Newsletter search state
   const [searchCity, setSearchCity] = useState("");
@@ -85,7 +87,7 @@ export default function Home() {
 
           {/* Layer 2: Light Noise Texture Overlay on Background Alone */}
           <div
-            className="absolute inset-0 w-full h-full scale-[1.2] transform opacity-[0.08] [mask-image:radial-gradient(#fff,transparent,90%)] pointer-events-none z-[5]"
+            className="absolute inset-0 w-full h-full opacity-[0.08] [mask-image:radial-gradient(#fff,transparent,90%)] pointer-events-none z-[5]"
             style={{
               backgroundImage: "url(/noise.webp)",
               backgroundSize: "30%",
@@ -113,16 +115,16 @@ export default function Home() {
 
           <div className="relative z-20 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* Hero Left: Headline, Subtext, Orange "View all cars" Button */}
-            <div className="lg:col-span-7 flex flex-col items-start z-20">
-              <Reveal triggerOnLoad delay={0}>
-                <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-extrabold tracking-tight leading-[1.26] sm:leading-[1.28] lg:leading-[1.3] mb-10 lg:mb-12">
-                  Experience the road <br />
+            <div className="lg:col-span-7 flex flex-col items-start z-20 w-full min-w-0">
+              <Reveal triggerOnLoad delay={0} className="w-full">
+                <h1 className="text-[clamp(2.1rem,6.5vw,3.375rem)] font-extrabold tracking-tight leading-[1.2] sm:leading-[1.26] lg:leading-[1.3] mb-6 sm:mb-8 lg:mb-10 [text-wrap:balance]">
+                  Experience the road <br className="hidden sm:inline" />
                   like never before
                 </h1>
               </Reveal>
 
-              <Reveal triggerOnLoad delay={120}>
-                <p className="text-white/85 text-base sm:text-lg max-w-[480px] leading-relaxed mb-10 lg:mb-12 font-normal">
+              <Reveal triggerOnLoad delay={120} className="w-full">
+                <p className="text-white/85 text-base sm:text-lg max-w-[480px] leading-relaxed mb-6 sm:mb-8 lg:mb-10 font-normal">
                   Discover flexible, premium vehicle rentals at unbeatable rates. Instant 24/7 online booking, full insurance coverage, and doorstep delivery for every journey.
                 </p>
               </Reveal>
@@ -151,7 +153,7 @@ export default function Home() {
                       <select
                         value={carType}
                         onChange={(e) => setCarType(e.target.value)}
-                        className="w-full h-11 px-4 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black focus:outline-none focus:border-[#5937E0] appearance-none cursor-pointer"
+                        className="w-full h-11 px-4 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-[16px] sm:text-xs font-medium text-black focus:outline-none focus:border-[#5937E0] appearance-none cursor-pointer"
                       >
                         <option value="all">Car type</option>
                         <option value="sedan">Sedan</option>
@@ -174,7 +176,7 @@ export default function Home() {
                         placeholder="Place of rental"
                         value={rentalPlace}
                         onChange={(e) => setRentalPlace(e.target.value)}
-                        className="w-full h-11 pl-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black placeholder:text-[#6C757D] focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 pl-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-[16px] sm:text-xs font-medium text-black placeholder:text-[#6C757D] focus:outline-none focus:border-[#5937E0]"
                       />
                       <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#6C757D]">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -191,7 +193,7 @@ export default function Home() {
                         placeholder="Place of return"
                         value={returnPlace}
                         onChange={(e) => setReturnPlace(e.target.value)}
-                        className="w-full h-11 pl-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black placeholder:text-[#6C757D] focus:outline-none focus:border-[#5937E0]"
+                        className="w-full h-11 pl-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-[16px] sm:text-xs font-medium text-black placeholder:text-[#6C757D] focus:outline-none focus:border-[#5937E0]"
                       />
                       <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#6C757D]">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -201,32 +203,62 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Field 4: Rental date */}
-                    <div className="relative">
+                    {/* Field 4: Rental date / Pick-up date */}
+                    <div className="relative w-full h-11">
                       <input
                         type="date"
+                        min={todayStr}
                         value={rentalDate}
-                        onChange={(e) => setRentalDate(e.target.value)}
-                        placeholder="Rental date"
-                        className="w-full h-11 px-4 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black focus:outline-none focus:border-[#5937E0]"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setRentalDate(val);
+                          if (returnDate && val > returnDate) {
+                            setReturnDate(val);
+                          }
+                        }}
+                        className={`w-full h-11 px-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-[16px] sm:text-xs font-medium focus:outline-none focus:border-[#5937E0] cursor-pointer appearance-none ${
+                          !rentalDate ? "text-transparent" : "text-black"
+                        }`}
                       />
+                      {!rentalDate && (
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] sm:text-xs font-medium text-[#6C757D] pointer-events-none select-none">
+                          Pick-up date
+                        </span>
+                      )}
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#6C757D]">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
                     </div>
 
                     {/* Field 5: Return date */}
-                    <div className="relative">
+                    <div className="relative w-full h-11">
                       <input
                         type="date"
+                        min={rentalDate || todayStr}
                         value={returnDate}
                         onChange={(e) => setReturnDate(e.target.value)}
-                        placeholder="Return date"
-                        className="w-full h-11 px-4 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black focus:outline-none focus:border-[#5937E0]"
+                        className={`w-full h-11 px-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-[16px] sm:text-xs font-medium focus:outline-none focus:border-[#5937E0] cursor-pointer appearance-none ${
+                          !returnDate ? "text-transparent" : "text-black"
+                        }`}
                       />
+                      {!returnDate && (
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] sm:text-xs font-medium text-[#6C757D] pointer-events-none select-none">
+                          Return date
+                        </span>
+                      )}
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#6C757D]">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
                     </div>
 
                     {/* Submit Button: Orange "Book now" pill */}
                     <button
                       type="submit"
-                      className="w-full h-12 mt-2 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] hover:-translate-y-0.5 hover:shadow-lg text-white font-bold text-sm shadow-md transition-all duration-200 active:scale-[0.98]"
+                      className="w-full h-12 mt-2 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] hover:-translate-y-0.5 hover:shadow-lg text-white font-bold text-sm shadow-md transition-all duration-200 active:scale-[0.98] cursor-pointer flex items-center justify-center min-h-[44px]"
                     >
                       Book now
                     </button>
@@ -433,17 +465,17 @@ export default function Home() {
           4. "Choose the car that suits you" (CATALOGUE / 2x3 GRID OF 6 CARS)
          ========================================================================= */}
       <section id="catalogue" className="max-w-[1440px] mx-auto px-6 lg:px-16 py-20">
-        <Reveal delay={0} className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-black tracking-tight">
+        <Reveal delay={0} className="flex flex-col items-start gap-2.5 sm:flex-row sm:items-center sm:justify-between mb-8 sm:mb-10">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-black tracking-tight">
             Choose the car that suits you
           </h2>
           <Link
             href="/fleet"
-            className="flex items-center gap-1.5 text-sm font-bold text-black hover:text-[#5937E0] transition-colors"
+            className="flex items-center gap-1.5 text-sm font-bold text-black hover:text-[#5937E0] transition-colors whitespace-nowrap"
           >
             <span>View All</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
         </Reveal>
@@ -542,16 +574,16 @@ export default function Home() {
           7. "Enjoy every mile with complete peace of mind." BANNER
          ========================================================================= */}
       <section id="contact" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-10 sm:py-14">
-        <div className="group relative w-full rounded-[32px] lg:rounded-[40px] bg-gradient-to-r from-[#4423C6] via-[#5937E0] to-[#4F2FD4] border border-white/10 overflow-hidden p-8 sm:p-12 lg:p-16 text-white shadow-2xl min-h-[460px] lg:min-h-[500px] flex items-center">
+        <div className="group relative w-full rounded-[28px] sm:rounded-[32px] lg:rounded-[40px] bg-gradient-to-r from-[#4423C6] via-[#5937E0] to-[#4F2FD4] border border-white/10 overflow-hidden p-6 sm:p-12 lg:p-16 text-white shadow-2xl min-h-[420px] lg:min-h-[500px] flex items-center">
           {/* Ambient Radial Gradient Highlight (matching WobbleCard style) */}
           <div className="absolute inset-0 [background-image:radial-gradient(88%_100%_at_top_left,rgba(255,255,255,0.22),transparent_65%)] pointer-events-none" />
 
           {/* Soft Modern Glow */}
-          <div className="absolute top-0 right-1/4 w-[460px] h-[340px] bg-white/10 blur-[110px] rounded-full pointer-events-none" />
+          <div className="absolute top-0 right-1/4 w-[460px] max-w-full h-[340px] bg-white/10 blur-[110px] rounded-full pointer-events-none" />
 
-          {/* Noise Overlay (Matching the "Sign Up for Exclusive Car Deals" card) */}
+          {/* Noise Overlay */}
           <div
-            className="absolute inset-0 w-full h-full scale-[1.2] transform opacity-20 [mask-image:radial-gradient(#fff,transparent,85%)] pointer-events-none"
+            className="absolute inset-0 w-full h-full opacity-20 [mask-image:radial-gradient(#fff,transparent,85%)] pointer-events-none"
             style={{
               backgroundImage: "url(/noise.webp)",
               backgroundSize: "30%",
@@ -559,41 +591,41 @@ export default function Home() {
           />
 
           {/* Branded Tire Track Pattern */}
-          <div className="opacity-25 pointer-events-none">
+          <div className="absolute inset-0 opacity-25 pointer-events-none overflow-hidden">
             <TireTrackPattern variant="newsletter" />
           </div>
 
           {/* Left Content: Hero Typography & Search Input Pill */}
-          <div className="relative z-30 max-w-xl lg:max-w-2xl flex flex-col items-start">
-            <Reveal delay={0}>
-              <h2 className="font-['Work_Sans',sans-serif] text-4xl sm:text-5xl lg:text-[54px] font-extrabold tracking-tight text-white leading-[1.22] sm:leading-[1.24] lg:leading-[1.26] mb-6 sm:mb-8">
-                Enjoy every mile with <br />
+          <div className="relative z-30 w-full max-w-xl lg:max-w-2xl flex flex-col items-start min-w-0">
+            <Reveal delay={0} className="w-full">
+              <h2 className="font-['Work_Sans',sans-serif] text-2xl sm:text-4xl lg:text-[52px] font-extrabold tracking-tight text-white leading-[1.22] sm:leading-[1.24] lg:leading-[1.26] mb-4 sm:mb-8 [text-wrap:balance]">
+                Enjoy every mile with <br className="hidden sm:inline" />
                 complete peace of mind.
               </h2>
             </Reveal>
 
-            <Reveal delay={90}>
-              <p className="font-['Work_Sans',sans-serif] text-base sm:text-lg text-white/85 max-w-[500px] leading-relaxed mb-8 sm:mb-10 font-normal">
+            <Reveal delay={90} className="w-full">
+              <p className="font-['Work_Sans',sans-serif] text-sm sm:text-base lg:text-lg text-white/85 max-w-[500px] leading-relaxed mb-6 sm:mb-10 font-normal">
                 Find verified rental cars near you right now. Enter your city or destination to browse available vehicles, compare rates, and start your trip instantly.
               </p>
             </Reveal>
 
-            {/* Floating White Input Pill with Orange "Search" Button */}
-            <Reveal delay={180} className="w-full max-w-md sm:max-w-lg">
+            {/* White Input Pill with Orange "Search" Button (Stacked on mobile, pill on sm+) */}
+            <Reveal delay={180} className="w-full max-w-md sm:max-w-lg min-w-0">
               <form
                 onSubmit={handleCitySearch}
-                className="bg-white rounded-full p-2 flex items-center shadow-xl w-full transition-all focus-within:ring-4 focus-within:ring-white/20"
+                className="w-full bg-white rounded-2xl sm:rounded-full p-2 flex flex-col sm:flex-row items-stretch sm:items-center shadow-xl transition-all focus-within:ring-4 focus-within:ring-white/20 min-w-0"
               >
                 <input
                   type="text"
                   placeholder="City or destination"
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
-                  className="flex-1 h-11 sm:h-12 px-6 text-sm sm:text-base text-black placeholder:text-[#6C757D] focus:outline-none rounded-full font-['Work_Sans',sans-serif]"
+                  className="w-full sm:flex-1 h-12 px-5 text-[16px] sm:text-base text-black placeholder:text-[#6C757D] focus:outline-none rounded-xl sm:rounded-full font-['Work_Sans',sans-serif] min-w-0"
                 />
                 <button
                   type="submit"
-                  className="h-11 sm:h-12 px-8 sm:px-10 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] hover:-translate-y-0.5 hover:shadow-lg text-white text-sm font-bold transition-all duration-200 shrink-0 shadow-md active:scale-95 flex items-center justify-center"
+                  className="w-full sm:w-auto h-12 px-8 sm:px-10 mt-2 sm:mt-0 rounded-xl sm:rounded-full bg-[#FFA000] hover:bg-[#FF8F00] hover:-translate-y-0.5 hover:shadow-lg text-white text-sm font-bold transition-all duration-200 shrink-0 shadow-md active:scale-95 flex items-center justify-center cursor-pointer min-h-[44px]"
                 >
                   Search
                 </button>
@@ -605,7 +637,7 @@ export default function Home() {
           <Reveal
             variant="fade-scale"
             delay={150}
-            className="hidden md:block absolute -right-16 sm:-right-24 lg:-right-28 xl:-right-36 -bottom-4 sm:-bottom-8 lg:-bottom-12 w-[540px] md:w-[620px] lg:w-[740px] xl:w-[820px] aspect-[2816/1536] pointer-events-none z-20"
+            className="hidden lg:block absolute -right-20 lg:-right-28 xl:-right-36 -bottom-4 sm:-bottom-8 lg:-bottom-12 w-[540px] md:w-[620px] lg:w-[740px] xl:w-[820px] aspect-[2816/1536] pointer-events-none z-20"
           >
             <div className="relative w-full h-full">
               <Image

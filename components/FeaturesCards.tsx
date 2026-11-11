@@ -56,7 +56,7 @@ export function FeaturesCards() {
       {/* Card 3: Sign Up for Exclusive Car Deals and Offers */}
       <Reveal delay={200} className="col-span-1 lg:col-span-3 h-full">
         <WobbleCard
-          containerClassName="h-full bg-gradient-to-r from-[#4423C6] via-[#5937E0] to-[#4F2FD4] min-h-[440px] lg:min-h-[340px] border border-white/10"
+          containerClassName="h-full bg-gradient-to-r from-[#4423C6] via-[#5937E0] to-[#4F2FD4] min-h-[440px] lg:min-h-[340px] border border-white/10 overflow-hidden"
           className="flex flex-col justify-between"
         >
           <div className="max-w-sm sm:max-w-md relative z-10">
@@ -80,7 +80,7 @@ export function FeaturesCards() {
             height={500}
             alt="Car Deals"
             priority
-            className="absolute -right-8 md:-right-[20%] lg:-right-[2%] -bottom-6 lg:-bottom-14 object-contain pointer-events-none"
+            className="absolute right-0 md:-right-[20%] lg:-right-[2%] -bottom-6 lg:-bottom-14 object-contain pointer-events-none max-w-[280px] sm:max-w-none"
           />
         </WobbleCard>
       </Reveal>

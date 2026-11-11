@@ -56,7 +56,7 @@ export const WobbleCard = ({
               : "translate3d(0px, 0px, 0) scale3d(1, 1, 1)",
             transition: "transform 0.1s ease-out",
           }}
-          className={cn("h-full px-6 py-14 sm:px-10 sm:py-16 relative", className)}
+          className={cn("h-full px-6 py-14 sm:px-10 sm:py-16 relative overflow-hidden", className)}
         >
           <Noise />
           {children}
@@ -69,7 +69,7 @@ export const WobbleCard = ({
 const Noise = () => {
   return (
     <div
-      className="absolute inset-0 w-full h-full scale-[1.2] transform opacity-15 [mask-image:radial-gradient(#fff,transparent,80%)] pointer-events-none"
+      className="absolute inset-0 w-full h-full opacity-15 [mask-image:radial-gradient(#fff,transparent,80%)] pointer-events-none"
       style={{
         backgroundImage: "url(/noise.webp)",
         backgroundSize: "30%",
