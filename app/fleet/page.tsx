@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { cars as initialCars } from "@/constants";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { cars as fallbackCars } from "@/constants";
 import { CarProps } from "@/types";
 import CarCard from "@/components/CarCard";
-import { useSearchParams } from "next/navigation";
 import Reveal from "@/components/Reveal";
 import { supabase } from "@/lib/supabase";
 import {
+  CAR_SEGMENTS,
   normalizeFuel,
   normalizeTransmission,
   formatBodyType,
+  formatSegment,
 } from "@/lib/carTaxonomy";
 
 export default function FleetPage() {
@@ -38,24 +40,18 @@ const brandLogos = [
   { name: "Jeep", src: "/Brands Logos/Jeep.png", alt: "Jeep logo", width: 218, height: 88, query: "Jeep" },
 ];
 
-function FleetContent() {
-  const searchParams = useSearchParams();
-  const initialFuel = searchParams.get("fuel") || "";
-  const initialQuery = searchParams.get("query") || searchParams.get("city") || "";
-  const initialType = searchParams.get("type") || "all";
+type SortOption = "price_asc" | "price_desc" | "newest";
 
-  // Supabase Cars State
+function FleetContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // 1. Supabase Cars State & Skeletons
   const [carsList, setCarsList] = useState<CarProps[]>([]);
   const [loadingCars, setLoadingCars] = useState(true);
 
-  // Search & Filter States
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [selectedType, setSelectedType] = useState<string>(initialType.toLowerCase());
-  const [transmission, setTransmission] = useState<string>("all");
-  const [fuelType, setFuelType] = useState<string>(initialFuel ? normalizeFuel(initialFuel) : "all");
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 9;
-
+  // 2. Fetch cars once from Supabase
   useEffect(() => {
     async function loadCars() {
       try {
@@ -65,15 +61,14 @@ function FleetContent() {
           .neq("status", "hidden")
           .order("created_at", { ascending: false });
 
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
           setCarsList(data as CarProps[]);
         } else {
-          // Fallback if network/supabase initial error
-          setCarsList(initialCars as CarProps[]);
+          setCarsList(fallbackCars as CarProps[]);
         }
       } catch (err) {
         console.error("Error loading cars from Supabase:", err);
-        setCarsList(initialCars as CarProps[]);
+        setCarsList(fallbackCars as CarProps[]);
       } finally {
         setLoadingCars(false);
       }
@@ -86,28 +81,162 @@ function FleetContent() {
     return carsList.filter((car) => car.status !== "hidden");
   }, [carsList]);
 
-  // Body type chips derived from actual cars in database
+  // Actual price bounds from fleet data
+  const { minPriceBound, maxPriceBound } = useMemo(() => {
+    if (visibleCars.length === 0) return { minPriceBound: 300, maxPriceBound: 2000 };
+    const prices = visibleCars.map((c) => Number(c.price_per_day) || 0);
+    return {
+      minPriceBound: Math.min(...prices),
+      maxPriceBound: Math.max(...prices),
+    };
+  }, [visibleCars]);
+
+  // 3. State initialized from URL Query Params
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") || searchParams.get("query") || searchParams.get("city") || "");
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+  const [selectedType, setSelectedType] = useState(() => searchParams.get("type")?.toLowerCase() || "all");
+  const [selectedSegment, setSelectedSegment] = useState(() => searchParams.get("segment")?.toLowerCase() || "all");
+  const [selectedSeats, setSelectedSeats] = useState(() => searchParams.get("seats") || "all");
+  const [transmission, setTransmission] = useState(() => searchParams.get("transmission") || "all");
+  const [fuelType, setFuelType] = useState(() => searchParams.get("fuel") || "all");
+  const [sortOption, setSortOption] = useState<SortOption>(() => {
+    const s = searchParams.get("sort");
+    return s === "price_desc" || s === "newest" ? s : "price_asc";
+  });
+
+  // Price range state
+  const [minPrice, setMinPrice] = useState<number>(() => {
+    const val = searchParams.get("min_price");
+    return val ? Number(val) : minPriceBound;
+  });
+  const [maxPrice, setMaxPrice] = useState<number>(() => {
+    const val = searchParams.get("max_price");
+    return val ? Number(val) : maxPriceBound;
+  });
+
+  // Date availability state
+  const [pickupDate, setPickupDate] = useState(() => searchParams.get("pickup_date") || "");
+  const [returnDate, setReturnDate] = useState(() => searchParams.get("return_date") || "");
+  const [onlyAvailable, setOnlyAvailable] = useState<boolean>(() => searchParams.get("only_available") === "true");
+  const [availabilityMap, setAvailabilityMap] = useState<Record<string, boolean>>({});
+  const [isCheckingDates, setIsCheckingDates] = useState(false);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    return isNaN(p) || p < 1 ? 1 : p;
+  });
+  const itemsPerPage = 9;
+
+  // Mobile drawer state
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Synchronize price bounds once cars are loaded if not customized by user
+  useEffect(() => {
+    if (visibleCars.length > 0) {
+      const urlMin = searchParams.get("min_price");
+      const urlMax = searchParams.get("max_price");
+      if (!urlMin) setMinPrice(minPriceBound);
+      if (!urlMax) setMaxPrice(maxPriceBound);
+    }
+  }, [minPriceBound, maxPriceBound, visibleCars.length, searchParams]);
+
+  // Debounce search input (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 4. Check Date Availability via Supabase RPC (SECURITY DEFINER)
+  useEffect(() => {
+    if (!pickupDate || !returnDate || returnDate < pickupDate) {
+      setAvailabilityMap({});
+      return;
+    }
+
+    let isCancelled = false;
+    async function checkAvailability() {
+      setIsCheckingDates(true);
+      try {
+        const { data, error } = await supabase.rpc("get_available_cars", {
+          p_pickup_date: pickupDate,
+          p_return_date: returnDate,
+          p_include_pending: false,
+        });
+
+        if (!error && data && !isCancelled) {
+          const map: Record<string, boolean> = {};
+          (data as { car_id: string; is_available: boolean }[]).forEach((row) => {
+            map[row.car_id] = row.is_available;
+          });
+          setAvailabilityMap(map);
+        }
+      } catch (err) {
+        console.error("Availability RPC error:", err);
+      } finally {
+        if (!isCancelled) setIsCheckingDates(false);
+      }
+    }
+
+    checkAvailability();
+    return () => {
+      isCancelled = true;
+    };
+  }, [pickupDate, returnDate]);
+
+  // 5. Synchronize URL State smoothly with window.history (preserves back/refresh/share)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
+    if (selectedType !== "all") params.set("type", selectedType);
+    if (selectedSegment !== "all") params.set("segment", selectedSegment);
+    if (selectedSeats !== "all") params.set("seats", selectedSeats);
+    if (transmission !== "all") params.set("transmission", transmission);
+    if (fuelType !== "all") params.set("fuel", fuelType);
+    if (sortOption !== "price_asc") params.set("sort", sortOption);
+    if (minPrice > minPriceBound) params.set("min_price", String(minPrice));
+    if (maxPrice < maxPriceBound) params.set("max_price", String(maxPrice));
+    if (pickupDate) params.set("pickup_date", pickupDate);
+    if (returnDate) params.set("return_date", returnDate);
+    if (onlyAvailable) params.set("only_available", "true");
+    if (currentPage > 1) params.set("page", String(currentPage));
+
+    const qs = params.toString();
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.replaceState(null, "", newUrl);
+  }, [
+    debouncedQuery,
+    selectedType,
+    selectedSegment,
+    selectedSeats,
+    transmission,
+    fuelType,
+    sortOption,
+    minPrice,
+    maxPrice,
+    pickupDate,
+    returnDate,
+    onlyAvailable,
+    currentPage,
+    pathname,
+    minPriceBound,
+    maxPriceBound,
+  ]);
+
+  // 6. Dynamic Options Generated from Fleet Data with Counts (Hide 0-car options)
+
+  // A. Body Type Chips
   const dynamicBodyTypes = useMemo(() => {
     const counts: Record<string, number> = {};
     visibleCars.forEach((c) => {
-      const type = (
-        c.body_type ||
-        (c.class?.toLowerCase().includes("suv") ? "suv" : "sedan")
-      ).toLowerCase();
+      const type = (c.body_type || (c.class?.toLowerCase().includes("suv") ? "suv" : "sedan")).toLowerCase();
       counts[type] = (counts[type] || 0) + 1;
     });
 
-    const standardOrder = [
-      "sedan",
-      "hatchback",
-      "suv",
-      "minivan",
-      "pickup",
-      "convertible",
-      "coupe",
-      "van",
-    ];
-
+    const standardOrder = ["sedan", "hatchback", "suv", "minivan", "pickup", "convertible", "coupe", "van"];
     const chips: { label: string; value: string; count: number }[] = [
       { label: "All Vehicles", value: "all", count: visibleCars.length },
     ];
@@ -123,7 +252,6 @@ function FleetContent() {
       }
     });
 
-    // Also include any other type not in standard list if present
     Object.keys(counts).forEach((type) => {
       if (!standardOrder.includes(type) && counts[type] > 0) {
         chips.push({
@@ -137,7 +265,45 @@ function FleetContent() {
     return chips;
   }, [visibleCars]);
 
-  // Dynamic Transmission Options derived from data (normalized, no empty options)
+  // B. Vehicle Segment Options
+  const availableSegments = useMemo(() => {
+    const counts: Record<string, number> = {};
+    visibleCars.forEach((c) => {
+      const seg = (c.segment || "midsize").toLowerCase();
+      counts[seg] = (counts[seg] || 0) + 1;
+    });
+
+    const list: { label: string; value: string; count: number }[] = [];
+    CAR_SEGMENTS.forEach((s) => {
+      const count = counts[s.value] || 0;
+      if (count > 0) {
+        list.push({ label: s.label, value: s.value, count });
+      }
+    });
+    return list;
+  }, [visibleCars]);
+
+  // C. Seats Filter Options (2, 4-5, 6+)
+  const availableSeatsOptions = useMemo(() => {
+    let count2 = 0;
+    let count45 = 0;
+    let count6plus = 0;
+
+    visibleCars.forEach((c) => {
+      const s = c.seats || 5;
+      if (s === 2) count2++;
+      else if (s >= 4 && s <= 5) count45++;
+      else if (s >= 6) count6plus++;
+    });
+
+    const options: { label: string; value: string; count: number }[] = [];
+    if (count2 > 0) options.push({ label: "2 Seats", value: "2", count: count2 });
+    if (count45 > 0) options.push({ label: "4-5 Seats", value: "4-5", count: count45 });
+    if (count6plus > 0) options.push({ label: "6+ Seats", value: "6+", count: count6plus });
+    return options;
+  }, [visibleCars]);
+
+  // D. Transmission Options (Normalized)
   const availableTransmissions = useMemo(() => {
     const set = new Set<string>();
     visibleCars.forEach((c) => {
@@ -146,7 +312,7 @@ function FleetContent() {
     return Array.from(set).sort();
   }, [visibleCars]);
 
-  // Dynamic Fuel Options derived from data (normalized, no empty options)
+  // E. Fuel Options (Normalized)
   const availableFuels = useMemo(() => {
     const set = new Set<string>();
     visibleCars.forEach((c) => {
@@ -155,75 +321,154 @@ function FleetContent() {
     return Array.from(set).sort();
   }, [visibleCars]);
 
-  // Combined In-Memory Filter with AND
+  // 7. Combined In-Memory Filter with AND
   const filteredCars = useMemo(() => {
     return visibleCars.filter((car) => {
       // 1. Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      if (debouncedQuery.trim()) {
+        const q = debouncedQuery.toLowerCase().trim();
         const name = `${car.make} ${car.model}`.toLowerCase();
         const bType = (car.body_type || "").toLowerCase();
         const cClass = (car.class || "").toLowerCase();
         const seg = (car.segment || "").toLowerCase();
-        if (
-          !name.includes(q) &&
-          !bType.includes(q) &&
-          !cClass.includes(q) &&
-          !seg.includes(q)
-        ) {
+        if (!name.includes(q) && !bType.includes(q) && !cClass.includes(q) && !seg.includes(q)) {
           return false;
         }
       }
 
       // 2. Body Type Chip
       if (selectedType !== "all") {
-        const carType = (
-          car.body_type ||
-          (car.class?.toLowerCase().includes("suv") ? "suv" : "sedan")
-        ).toLowerCase();
-        if (carType !== selectedType.toLowerCase()) {
-          return false;
-        }
+        const carType = (car.body_type || (car.class?.toLowerCase().includes("suv") ? "suv" : "sedan")).toLowerCase();
+        if (carType !== selectedType.toLowerCase()) return false;
       }
 
-      // 3. Transmission (normalized)
+      // 3. Vehicle Segment
+      if (selectedSegment !== "all") {
+        const carSeg = (car.segment || "").toLowerCase();
+        if (carSeg !== selectedSegment.toLowerCase()) return false;
+      }
+
+      // 4. Seats Filter (2, 4-5, 6+)
+      if (selectedSeats !== "all") {
+        const s = car.seats || 5;
+        if (selectedSeats === "2" && s !== 2) return false;
+        if (selectedSeats === "4-5" && (s < 4 || s > 5)) return false;
+        if (selectedSeats === "6+" && s < 6) return false;
+      }
+
+      // 5. Transmission (normalized)
       if (transmission !== "all") {
-        if (normalizeTransmission(car.transmission) !== transmission) {
-          return false;
-        }
+        if (normalizeTransmission(car.transmission) !== transmission) return false;
       }
 
-      // 4. Fuel Type (normalized)
+      // 6. Fuel Type (normalized)
       if (fuelType !== "all") {
-        if (normalizeFuel(car.fuel_type) !== fuelType) {
-          return false;
-        }
+        if (normalizeFuel(car.fuel_type) !== fuelType) return false;
+      }
+
+      // 7. Price Range Filter
+      const price = Number(car.price_per_day) || 0;
+      if (price < minPrice || price > maxPrice) return false;
+
+      // 8. Availability filter (if onlyAvailable checked and dates selected)
+      if (onlyAvailable && pickupDate && returnDate && car.id) {
+        if (availabilityMap[car.id] === false) return false;
       }
 
       return true;
     });
-  }, [visibleCars, searchQuery, selectedType, transmission, fuelType]);
+  }, [
+    visibleCars,
+    debouncedQuery,
+    selectedType,
+    selectedSegment,
+    selectedSeats,
+    transmission,
+    fuelType,
+    minPrice,
+    maxPrice,
+    onlyAvailable,
+    pickupDate,
+    returnDate,
+    availabilityMap,
+  ]);
 
-  // Pagination (applied strictly after filtering)
-  const totalPages = Math.ceil(filteredCars.length / itemsPerPage) || 1;
+  // 8. Sorting: price_asc, price_desc, newest
+  const sortedCars = useMemo(() => {
+    const list = [...filteredCars];
+    if (sortOption === "price_asc") {
+      list.sort((a, b) => (Number(a.price_per_day) || 0) - (Number(b.price_per_day) || 0));
+    } else if (sortOption === "price_desc") {
+      list.sort((a, b) => (Number(b.price_per_day) || 0) - (Number(a.price_per_day) || 0));
+    } else if (sortOption === "newest") {
+      list.sort((a, b) => {
+        const yearDiff = (b.year || 0) - (a.year || 0);
+        if (yearDiff !== 0) return yearDiff;
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+    }
+    return list;
+  }, [filteredCars, sortOption]);
+
+  // 9. Pagination (strictly applied after filtering and sorting)
+  const totalPages = Math.ceil(sortedCars.length / itemsPerPage) || 1;
   const paginatedCars = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredCars.slice(start, start + itemsPerPage);
-  }, [filteredCars, currentPage]);
+    return sortedCars.slice(start, start + itemsPerPage);
+  }, [sortedCars, currentPage]);
 
-  const resetFilters = () => {
+  // Active filters count (for badge and removable pills)
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (debouncedQuery.trim()) count++;
+    if (selectedType !== "all") count++;
+    if (selectedSegment !== "all") count++;
+    if (selectedSeats !== "all") count++;
+    if (transmission !== "all") count++;
+    if (fuelType !== "all") count++;
+    if (minPrice > minPriceBound || maxPrice < maxPriceBound) count++;
+    if (pickupDate && returnDate) count++;
+    if (onlyAvailable) count++;
+    return count;
+  }, [
+    debouncedQuery,
+    selectedType,
+    selectedSegment,
+    selectedSeats,
+    transmission,
+    fuelType,
+    minPrice,
+    maxPrice,
+    minPriceBound,
+    maxPriceBound,
+    pickupDate,
+    returnDate,
+    onlyAvailable,
+  ]);
+
+  // Reset all filters to default
+  const resetFilters = useCallback(() => {
     setSearchQuery("");
+    setDebouncedQuery("");
     setSelectedType("all");
+    setSelectedSegment("all");
+    setSelectedSeats("all");
     setTransmission("all");
     setFuelType("all");
+    setMinPrice(minPriceBound);
+    setMaxPrice(maxPriceBound);
+    setPickupDate("");
+    setReturnDate("");
+    setOnlyAvailable(false);
+    setSortOption("price_asc");
     setCurrentPage(1);
-  };
+  }, [minPriceBound, maxPriceBound]);
 
   return (
-    <main className="min-h-screen bg-[#F8F8FB] text-[#000000] pt-[104px] pb-24">
+    <main className="min-h-screen bg-[#F8F8FB] text-[#000000] pt-[104px] pb-24 font-['Work_Sans',sans-serif]">
       {/* Header Banner */}
-      <section className="bg-white border-b border-[#E5E7EB] py-14">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-16 text-center">
+      <section className="bg-white border-b border-[#E5E7EB] py-10 sm:py-14">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16 text-center">
           <Reveal triggerOnLoad delay={0}>
             <h1 className="text-3xl sm:text-5xl font-extrabold text-[#000000] tracking-tight mb-3">
               Select a vehicle group
@@ -238,15 +483,15 @@ function FleetContent() {
             </p>
           </Reveal>
 
-          {/* Dynamic Body Type Filter Chips */}
+          {/* Dynamic Body Type Filter Chips (Horizontal scroll on mobile) */}
           <Reveal triggerOnLoad delay={140}>
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
+            <div className="flex items-center gap-2 mt-8 overflow-x-auto no-scrollbar py-2 px-1 justify-start sm:justify-center">
               {loadingCars && dynamicBodyTypes.length <= 1 ? (
                 <>
-                  {[1, 2, 3, 4].map((i) => (
+                  {[1, 2, 3, 4, 5].map((i) => (
                     <div
                       key={i}
-                      className="h-11 w-28 rounded-[50px] bg-gray-100 animate-pulse"
+                      className="h-11 w-28 rounded-[50px] bg-gray-100 animate-pulse shrink-0"
                     />
                   ))}
                 </>
@@ -259,7 +504,7 @@ function FleetContent() {
                       setSelectedType(cat.value);
                       setCurrentPage(1);
                     }}
-                    className={`px-5 py-2.5 rounded-[50px] text-xs font-bold transition-all duration-200 shadow-sm hover:-translate-y-0.5 cursor-pointer flex items-center gap-2 ${
+                    className={`px-4 sm:px-5 py-2.5 rounded-[50px] text-xs font-bold transition-all duration-200 shadow-sm hover:-translate-y-0.5 cursor-pointer flex items-center gap-2 shrink-0 ${
                       selectedType === cat.value
                         ? "bg-[#5937E0] text-white shadow-[0_4px_16px_rgba(89,55,224,0.3)]"
                         : "bg-[#F8F8FB] border border-[#E5E7EB] text-[#000000] hover:bg-[#EEEDF9] hover:text-[#5937E0]"
@@ -283,114 +528,458 @@ function FleetContent() {
         </div>
       </section>
 
-      {/* Filter and Search Bar Strip */}
-      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-8">
+      {/* Main Filter & Controls Section */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16 mt-8">
         <Reveal delay={0}>
-          <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Search Input */}
-            <div className="relative w-full md:w-96">
-              <svg
-                className="w-4 h-4 text-[#6C757D] absolute left-4 top-1/2 -translate-y-1/2"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 sm:p-6 shadow-sm space-y-4">
+            {/* Top Row: Search + Mobile Filter Trigger + Sort Dropdown */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              {/* Search Input */}
+              <div className="relative w-full md:w-96">
+                <svg
+                  className="w-4 h-4 text-[#6C757D] absolute left-4 top-1/2 -translate-y-1/2"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by make, model, category..."
+                  className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-[#000000] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#5937E0] transition-colors"
                 />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="Search by make, model, or category..."
-                className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-[#000000] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#5937E0] transition-colors"
-              />
-            </div>
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setDebouncedQuery("");
+                      setCurrentPage(1);
+                    }}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black text-sm"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
 
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-              {/* Result Count Indicator */}
-              <span className="text-xs font-semibold text-[#6C757D] hidden lg:inline">
-                {filteredCars.length}{" "}
-                {filteredCars.length === 1 ? "vehicle available" : "vehicles available"}
-              </span>
-
-              {/* Transmission filter */}
-              <select
-                value={transmission}
-                onChange={(e) => {
-                  setTransmission(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-[#000000] focus:outline-none focus:border-[#5937E0] transition-colors cursor-pointer"
-              >
-                <option value="all">All Transmissions</option>
-                {availableTransmissions.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-
-              {/* Fuel filter */}
-              <select
-                value={fuelType}
-                onChange={(e) => {
-                  setFuelType(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-[#000000] focus:outline-none focus:border-[#5937E0] transition-colors cursor-pointer"
-              >
-                <option value="all">All Fuel Types</option>
-                {availableFuels.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-
-              {/* Reset Button */}
-              {(searchQuery ||
-                selectedType !== "all" ||
-                transmission !== "all" ||
-                fuelType !== "all") && (
+              {/* Action Buttons: Mobile Drawer Button & Sort Dropdown */}
+              <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                {/* Mobile Filter Trigger Button (Drawer) */}
                 <button
                   type="button"
-                  onClick={resetFilters}
-                  className="h-11 px-4 rounded-xl text-xs font-bold text-[#5937E0] hover:bg-[#EEEDF9] transition-colors cursor-pointer"
+                  onClick={() => setIsMobileDrawerOpen(true)}
+                  className="lg:hidden h-11 px-4 rounded-xl bg-[#EEEDF9] text-[#5937E0] hover:bg-[#5937E0] hover:text-white transition-all text-xs font-bold flex items-center gap-2 cursor-pointer"
                 >
-                  Clear Filters
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  <span>Filters</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="w-5 h-5 rounded-full bg-[#5937E0] group-hover:bg-white text-white text-[10px] flex items-center justify-center font-bold">
+                      {activeFiltersCount}
+                    </span>
+                  )}
                 </button>
+
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-[#6C757D] font-medium hidden sm:inline">Sort:</span>
+                  <select
+                    value={sortOption}
+                    onChange={(e) => {
+                      setSortOption(e.target.value as SortOption);
+                      setCurrentPage(1);
+                    }}
+                    className="h-11 px-3 sm:px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-[#000000] focus:outline-none focus:border-[#5937E0] transition-colors cursor-pointer"
+                  >
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="newest">Newest Fleet</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Filters Row (Hidden on mobile, present in drawer) */}
+            <div className="hidden lg:grid grid-cols-12 gap-3 pt-3 border-t border-[#E5E7EB] items-center">
+              {/* Dates Selector */}
+              <div className="col-span-4 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
+                    Pickup Date
+                  </label>
+                  <input
+                    type="date"
+                    value={pickupDate}
+                    min={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => {
+                      setPickupDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black focus:outline-none focus:border-[#5937E0]"
+                  />
+                </div>
+                <div className="relative flex-1">
+                  <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
+                    Return Date
+                  </label>
+                  <input
+                    type="date"
+                    value={returnDate}
+                    min={pickupDate || new Date().toISOString().split("T")[0]}
+                    onChange={(e) => {
+                      setReturnDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black focus:outline-none focus:border-[#5937E0]"
+                  />
+                </div>
+              </div>
+
+              {/* Segment Dropdown */}
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
+                  Segment
+                </label>
+                <select
+                  value={selectedSegment}
+                  onChange={(e) => {
+                    setSelectedSegment(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                >
+                  <option value="all">All Segments</option>
+                  {availableSegments.map((seg) => (
+                    <option key={seg.value} value={seg.value}>
+                      {seg.label} ({seg.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Seats Dropdown */}
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
+                  Seats
+                </label>
+                <select
+                  value={selectedSeats}
+                  onChange={(e) => {
+                    setSelectedSeats(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                >
+                  <option value="all">All Seats</option>
+                  {availableSeatsOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} ({opt.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Transmission Dropdown */}
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
+                  Transmission
+                </label>
+                <select
+                  value={transmission}
+                  onChange={(e) => {
+                    setTransmission(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                >
+                  <option value="all">All Transmissions</option>
+                  {availableTransmissions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Fuel Dropdown */}
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
+                  Fuel Type
+                </label>
+                <select
+                  value={fuelType}
+                  onChange={(e) => {
+                    setFuelType(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                >
+                  <option value="all">All Fuels</option>
+                  {availableFuels.map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Price Range Slider & Bounds */}
+            <div className="hidden lg:flex items-center justify-between gap-4 pt-3 border-t border-[#E5E7EB] text-xs">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-[#6C757D] uppercase text-[10px] tracking-wider">
+                  Daily Price (MAD):
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={minPriceBound}
+                    max={maxPrice}
+                    value={minPrice}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setMinPrice(v);
+                      setCurrentPage(1);
+                    }}
+                    className="w-20 h-9 px-2 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-center font-bold text-black text-xs"
+                  />
+                  <span className="text-[#6C757D]">to</span>
+                  <input
+                    type="number"
+                    min={minPrice}
+                    max={maxPriceBound}
+                    value={maxPrice}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setMaxPrice(v);
+                      setCurrentPage(1);
+                    }}
+                    className="w-20 h-9 px-2 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-center font-bold text-black text-xs"
+                  />
+                  <span className="text-[#6C757D]">DH/day</span>
+                </div>
+              </div>
+
+              {/* Only Available Vehicles Toggle */}
+              {pickupDate && returnDate && (
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-black">
+                  <input
+                    type="checkbox"
+                    checked={onlyAvailable}
+                    onChange={(e) => {
+                      setOnlyAvailable(e.target.checked);
+                      setCurrentPage(1);
+                    }}
+                    className="w-4 h-4 text-[#5937E0] rounded border-gray-300 focus:ring-[#5937E0]"
+                  />
+                  <span>Show only vehicles free for these dates</span>
+                </label>
               )}
             </div>
           </div>
         </Reveal>
+
+        {/* Active Filter Tags Strip */}
+        {activeFiltersCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-2">
+            <span className="text-xs font-bold text-[#6C757D] mr-1">Active Filters:</span>
+
+            {/* Body Type Tag */}
+            {selectedType !== "all" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Type: {formatBodyType(selectedType)}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedType("all");
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Segment Tag */}
+            {selectedSegment !== "all" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Segment: {formatSegment(selectedSegment)}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSegment("all");
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Seats Tag */}
+            {selectedSeats !== "all" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Seats: {selectedSeats}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSeats("all");
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Transmission Tag */}
+            {transmission !== "all" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Trans: {transmission}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTransmission("all");
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Fuel Tag */}
+            {fuelType !== "all" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Fuel: {fuelType}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFuelType("all");
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Price Tag */}
+            {(minPrice > minPriceBound || maxPrice < maxPriceBound) && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Price: {minPrice} - {maxPrice} DH
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMinPrice(minPriceBound);
+                    setMaxPrice(maxPriceBound);
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Dates Tag */}
+            {pickupDate && returnDate && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Dates: {pickupDate} → {returnDate}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPickupDate("");
+                    setReturnDate("");
+                    setOnlyAvailable(false);
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Search Query Tag */}
+            {debouncedQuery.trim() && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
+                Search: &ldquo;{debouncedQuery}&rdquo;
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setDebouncedQuery("");
+                    setCurrentPage(1);
+                  }}
+                  className="hover:text-black font-extrabold"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Clear All Button */}
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs font-bold text-[#FFA000] hover:text-[#FF8F00] underline ml-2 cursor-pointer"
+            >
+              Clear all filters
+            </button>
+
+            {/* Result count pill */}
+            <span className="text-xs font-medium text-[#6C757D] ml-auto">
+              {sortedCars.length} {sortedCars.length === 1 ? "vehicle found" : "vehicles found"}
+            </span>
+          </div>
+        )}
       </section>
 
-      {/* Vehicles Grid */}
-      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-10">
+      {/* Vehicles Grid Section */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16 mt-8">
         {loadingCars ? (
+          /* Skeleton Loading Cards */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
               <div
                 key={i}
-                className="h-96 rounded-[16px] bg-white border border-[#E5E7EB] p-6 animate-pulse"
+                className="h-96 rounded-[16px] bg-white border border-[#E5E7EB] p-6 flex flex-col justify-between animate-pulse"
               >
-                <div className="w-full h-44 bg-gray-100 rounded-xl mb-4"></div>
-                <div className="h-5 w-3/4 bg-gray-100 rounded mb-2"></div>
-                <div className="h-4 w-1/3 bg-gray-100 rounded"></div>
+                <div>
+                  <div className="w-full h-44 bg-gray-100 rounded-xl mb-4" />
+                  <div className="h-5 w-3/4 bg-gray-100 rounded mb-2" />
+                  <div className="h-4 w-1/3 bg-gray-100 rounded mb-4" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-4 bg-gray-100 rounded" />
+                    <div className="h-4 bg-gray-100 rounded" />
+                    <div className="h-4 bg-gray-100 rounded" />
+                    <div className="h-4 bg-gray-100 rounded" />
+                  </div>
+                </div>
+                <div className="h-11 w-full bg-gray-100 rounded-[50px] mt-4" />
               </div>
             ))}
           </div>
         ) : paginatedCars.length === 0 ? (
+          /* Empty State */
           <Reveal delay={0}>
-            <div className="bg-white rounded-3xl p-16 text-center border border-[#E5E7EB] max-w-xl mx-auto shadow-sm">
+            <div className="bg-white rounded-3xl p-12 sm:p-16 text-center border border-[#E5E7EB] max-w-xl mx-auto shadow-sm">
               <div className="w-16 h-16 rounded-full bg-[#EEEDF9] text-[#5937E0] flex items-center justify-center mx-auto mb-4">
                 <svg
                   className="w-8 h-8"
@@ -402,130 +991,362 @@ function FleetContent() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-[#000000] mb-2">
-                No vehicles match your filters
-              </h3>
-              <p className="text-[#6C757D] text-sm mb-6 leading-relaxed">
-                We couldn&apos;t find any vehicles matching your selected body type, fuel type, or search keywords.
+              <h3 className="text-xl font-bold text-black mb-2">No vehicles match your filters</h3>
+              <p className="text-sm text-[#6C757D] mb-6">
+                Try widening your price range, clearing some filter attributes, or removing date restrictions.
               </p>
               <button
                 type="button"
                 onClick={resetFilters}
-                className="px-6 py-3 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] hover:-translate-y-0.5 hover:shadow-md text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm"
+                className="px-6 py-3 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 Clear all filters
               </button>
             </div>
           </Reveal>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {paginatedCars.map((car, idx) => (
-              <Reveal
-                key={car.id || `${car.make}-${car.model}-${idx}`}
-                delay={idx * 60}
-              >
-                <CarCard car={car} index={idx} />
-              </Reveal>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination Controls */}
-        {!loadingCars && totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-14">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              className="w-10 h-10 rounded-full border border-[#E5E7EB] bg-white flex items-center justify-center text-[#000000] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#F8F8FB] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-              aria-label="Previous page"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19l-7-7 7-7"
+          /* Vehicle Cards Grid */
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {paginatedCars.map((car, idx) => (
+                <CarCard
+                  key={car.id || `${car.make}-${car.model}-${idx}`}
+                  car={car}
+                  index={idx}
+                  isAvailableForDates={
+                    pickupDate && returnDate && car.id
+                      ? availabilityMap[car.id] ?? true
+                      : undefined
+                  }
                 />
-              </svg>
-            </button>
+              ))}
+            </div>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-10 h-10 rounded-full text-xs font-bold transition-all duration-200 hover:-translate-y-0.5 cursor-pointer ${
-                  currentPage === page
-                    ? "bg-[#5937E0] text-white shadow-sm"
-                    : "bg-white border border-[#E5E7EB] text-[#000000] hover:bg-[#EEEDF9]"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-12">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-black hover:bg-[#EEEDF9] hover:text-[#5937E0] disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-black transition-colors cursor-pointer"
+                >
+                  ← Previous
+                </button>
 
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              className="w-10 h-10 rounded-full border border-[#E5E7EB] bg-white flex items-center justify-center text-[#000000] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#F8F8FB] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-              aria-label="Next page"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
+                <div className="flex items-center gap-1.5">
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === pageNum
+                            ? "bg-[#5937E0] text-white shadow-sm"
+                            : "bg-white border border-[#E5E7EB] text-black hover:bg-[#EEEDF9] hover:text-[#5937E0]"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-black hover:bg-[#EEEDF9] hover:text-[#5937E0] disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-black transition-colors cursor-pointer"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 
+      {/* Mobile Filters Drawer / Bottom Sheet */}
+      {isMobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-xs lg:hidden">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+          <div className="relative bg-white rounded-t-[28px] max-h-[85vh] flex flex-col shadow-2xl z-10 overflow-hidden animate-in slide-in-from-bottom duration-300">
+            {/* Drawer Header */}
+            <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-black">Filter Fleet</h3>
+                <p className="text-xs text-[#6C757D]">
+                  {sortedCars.length} {sortedCars.length === 1 ? "vehicle available" : "vehicles available"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:text-black flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Drawer Body (Scrollable) */}
+            <div className="overflow-y-auto p-6 space-y-6 flex-1 text-xs">
+              {/* Dates */}
+              <div>
+                <label className="block text-xs font-bold text-black mb-2">Rental Dates</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-[#6C757D] block mb-1">Pickup</span>
+                    <input
+                      type="date"
+                      value={pickupDate}
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => {
+                        setPickupDate(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-medium text-black"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#6C757D] block mb-1">Return</span>
+                    <input
+                      type="date"
+                      value={returnDate}
+                      min={pickupDate || new Date().toISOString().split("T")[0]}
+                      onChange={(e) => {
+                        setReturnDate(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-medium text-black"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-black">Daily Price (MAD)</label>
+                  <span className="text-xs font-bold text-[#5937E0]">
+                    {minPrice} - {maxPrice} DH
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min={minPriceBound}
+                    max={maxPrice}
+                    value={minPrice}
+                    onChange={(e) => {
+                      setMinPrice(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Min"
+                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-bold text-black"
+                  />
+                  <input
+                    type="number"
+                    min={minPrice}
+                    max={maxPriceBound}
+                    value={maxPrice}
+                    onChange={(e) => {
+                      setMaxPrice(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Max"
+                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-bold text-black"
+                  />
+                </div>
+              </div>
+
+              {/* Vehicle Segment */}
+              <div>
+                <label className="block text-xs font-bold text-black mb-2">Segment</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSegment("all");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-full font-bold ${
+                      selectedSegment === "all"
+                        ? "bg-[#5937E0] text-white"
+                        : "bg-[#F8F8FB] border border-[#E5E7EB] text-black"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {availableSegments.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSegment(s.value);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1.5 rounded-full font-bold ${
+                        selectedSegment === s.value
+                          ? "bg-[#5937E0] text-white"
+                          : "bg-[#F8F8FB] border border-[#E5E7EB] text-black"
+                      }`}
+                    >
+                      {s.label} ({s.count})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Seats */}
+              <div>
+                <label className="block text-xs font-bold text-black mb-2">Seats</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSeats("all");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-full font-bold ${
+                      selectedSeats === "all"
+                        ? "bg-[#5937E0] text-white"
+                        : "bg-[#F8F8FB] border border-[#E5E7EB] text-black"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {availableSeatsOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSeats(opt.value);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1.5 rounded-full font-bold ${
+                        selectedSeats === opt.value
+                          ? "bg-[#5937E0] text-white"
+                          : "bg-[#F8F8FB] border border-[#E5E7EB] text-black"
+                      }`}
+                    >
+                      {opt.label} ({opt.count})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Transmission & Fuel */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-black mb-1.5">Transmission</label>
+                  <select
+                    value={transmission}
+                    onChange={(e) => {
+                      setTransmission(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-semibold text-black"
+                  >
+                    <option value="all">All</option>
+                    {availableTransmissions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-black mb-1.5">Fuel</label>
+                  <select
+                    value={fuelType}
+                    onChange={(e) => {
+                      setFuelType(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-semibold text-black"
+                  >
+                    <option value="all">All</option>
+                    {availableFuels.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-4 border-t border-[#E5E7EB] bg-white flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="w-1/3 h-11 rounded-full border border-[#E5E7EB] text-xs font-bold text-black hover:bg-gray-50"
+              >
+                Clear all
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="w-2/3 h-11 rounded-full bg-[#5937E0] text-white text-xs font-bold shadow-md hover:bg-[#4A2CC7]"
+              >
+                Apply ({sortedCars.length} Cars)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Brand Logos Strip */}
-      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-20 mb-8">
-        <Reveal delay={0}>
-          <div className="bg-white rounded-[24px] py-10 px-6 sm:px-12 border border-[#E5E7EB] shadow-sm text-center">
-            <p className="text-xs font-bold text-[#6C757D] uppercase tracking-widest mb-8">
-              Supported Automobile Brands
+      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-20">
+        <Reveal delay={200}>
+          <div className="text-center mb-8">
+            <h3 className="text-xl sm:text-2xl font-extrabold text-[#000000]">
+              Browse By Popular Makes
+            </h3>
+            <p className="text-xs sm:text-sm text-[#6C757D] mt-1">
+              Select a brand to instantly filter through our premium vehicle line
             </p>
-            <div className="flex flex-wrap items-center justify-center sm:justify-between gap-8 sm:gap-10 lg:gap-14 px-2 sm:px-6">
-              {brandLogos.map((brand) => (
-                <button
-                  key={brand.name}
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery(brand.query || brand.name);
-                    window.scrollTo({ top: 400, behavior: "smooth" });
-                  }}
-                  title={`Filter by ${brand.name}`}
-                  className="h-10 sm:h-12 flex items-center justify-center group transition-transform hover:-translate-y-0.5 focus:outline-none cursor-pointer"
-                >
+          </div>
+        </Reveal>
+
+        <Reveal delay={260}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {brandLogos.map((brand) => (
+              <button
+                key={brand.name}
+                type="button"
+                onClick={() => {
+                  setSearchQuery(brand.query);
+                  setDebouncedQuery(brand.query);
+                  setCurrentPage(1);
+                }}
+                className="group flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-[#E5E7EB] hover:border-[#5937E0] hover:shadow-md transition-all cursor-pointer h-24"
+              >
+                <div className="relative w-16 h-8 flex items-center justify-center">
                   <Image
                     src={brand.src}
                     alt={brand.alt}
-                    width={brand.width}
-                    height={brand.height}
+                    fill
                     unoptimized
-                    className="max-h-7 sm:max-h-9 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
+                    className="object-contain grayscale group-hover:grayscale-0 transition-all duration-300 opacity-70 group-hover:opacity-100"
                   />
-                </button>
-              ))}
-            </div>
+                </div>
+                <span className="text-[11px] font-bold text-[#6C757D] group-hover:text-[#5937E0] transition-colors mt-2">
+                  {brand.name}
+                </span>
+              </button>
+            ))}
           </div>
         </Reveal>
       </section>

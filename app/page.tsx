@@ -28,7 +28,14 @@ export default function Home() {
 
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(`/fleet?type=${carType}`);
+    const params = new URLSearchParams();
+    if (carType && carType !== "all") params.set("type", carType.toLowerCase());
+    if (rentalDate) params.set("pickup_date", rentalDate);
+    if (returnDate) params.set("return_date", returnDate);
+    if (rentalPlace) params.set("pickup_place", rentalPlace);
+    if (returnPlace) params.set("return_place", returnPlace);
+    const qs = params.toString();
+    router.push(`/fleet${qs ? `?${qs}` : ""}`);
   };
 
   const handleCitySearch = (e: React.FormEvent) => {

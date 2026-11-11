@@ -14,9 +14,10 @@ import {
 interface CarCardProps {
   car: CarProps;
   index?: number;
+  isAvailableForDates?: boolean;
 }
 
-const CarCard = ({ car, index = 0 }: CarCardProps) => {
+const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
   const {
     id,
     year,
@@ -25,6 +26,8 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
     transmission,
     fuel_type,
     price_per_day,
+    seats,
+    km_policy,
     class: carClass,
     body_type,
     segment,
@@ -36,6 +39,7 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
     `${make.toLowerCase()}-${model.toLowerCase().replace(/\s+/g, "-")}-${year}-${index}`;
   const carImage = getCarImage(car);
   const isRented = status === "rented";
+  const isUnavailableForDates = isAvailableForDates === false && !isRented;
 
   const subtitle = body_type
     ? `${formatBodyType(body_type)}${segment ? ` • ${formatSegment(segment)}` : ""}`
@@ -43,10 +47,15 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
 
   return (
     <article className="relative flex flex-col bg-white rounded-[16px] border border-[#E5E7EB] shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_rgba(89,55,224,0.14)] hover:-translate-y-1 transition-all duration-200 ease-out overflow-hidden group p-6 justify-between">
-      {/* Rented Badge */}
+      {/* Rented or Date-Unavailable Badge */}
       {isRented && (
         <span className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-[#181524]/90 backdrop-blur-sm text-white text-[11px] font-bold tracking-wider uppercase shadow-md">
           Rented
+        </span>
+      )}
+      {isUnavailableForDates && (
+        <span className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-amber-600/95 backdrop-blur-sm text-white text-[10px] font-bold tracking-wider uppercase shadow-md">
+          Unavailable for Dates
         </span>
       )}
 
@@ -59,7 +68,7 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           priority={index < 3}
           className={`object-contain p-2 transition-transform duration-500 ${
-            isRented ? "opacity-75 grayscale-[20%]" : "group-hover:scale-105"
+            isRented || isUnavailableForDates ? "opacity-75 grayscale-[20%]" : "group-hover:scale-105"
           }`}
         />
       </div>
@@ -88,11 +97,30 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
         {/* Divider */}
         <div className="border-t border-[#E5E7EB] my-4"></div>
 
-        {/* 3 Specs with Icons (Normalized: Automatic / Manual, Petrol / Hybrid / Electric) */}
-        <div className="flex items-center justify-between text-xs text-[#6C757D] font-medium pb-5">
-          <div className="flex items-center gap-1.5">
+        {/* 4 Specs with Icons: Seats, Transmission, Fuel, Km Policy (replaces Air Conditioner) */}
+        <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 text-xs text-[#6C757D] font-medium pb-5">
+          {/* 1. Seats */}
+          <div className="flex items-center gap-1.5 truncate" title={`${seats || 5} Seats`}>
             <svg
-              className="w-4 h-4 text-[#6C757D]"
+              className="w-4 h-4 shrink-0 text-[#6C757D]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            <span className="truncate">{seats || 5} Seats</span>
+          </div>
+
+          {/* 2. Transmission */}
+          <div className="flex items-center gap-1.5 truncate" title={normalizeTransmission(transmission)}>
+            <svg
+              className="w-4 h-4 shrink-0 text-[#6C757D]"
               fill="none"
               stroke="currentColor"
               strokeWidth={1.8}
@@ -104,12 +132,13 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
                 d="M8 7h8m-8 5h8m-8 5h8"
               />
             </svg>
-            <span>{normalizeTransmission(transmission)}</span>
+            <span className="truncate">{normalizeTransmission(transmission)}</span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* 3. Fuel Type */}
+          <div className="flex items-center gap-1.5 truncate" title={normalizeFuel(fuel_type)}>
             <svg
-              className="w-4 h-4 text-[#6C757D]"
+              className="w-4 h-4 shrink-0 text-[#6C757D]"
               fill="none"
               stroke="currentColor"
               strokeWidth={1.8}
@@ -121,12 +150,13 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
                 d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
               />
             </svg>
-            <span>{normalizeFuel(fuel_type)}</span>
+            <span className="truncate">{normalizeFuel(fuel_type)}</span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* 4. Km Policy */}
+          <div className="flex items-center gap-1.5 truncate" title={km_policy || "Unlimited"}>
             <svg
-              className="w-4 h-4 text-[#6C757D]"
+              className="w-4 h-4 shrink-0 text-[#6C757D]"
               fill="none"
               stroke="currentColor"
               strokeWidth={1.8}
@@ -135,10 +165,10 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M12 3v18m9-9H3m15.364 6.364l-12.728-12.728m12.728 0L5.636 18.364"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
               />
             </svg>
-            <span>Air Conditioner</span>
+            <span className="truncate">{km_policy || "Unlimited"}</span>
           </div>
         </div>
       </div>
@@ -151,6 +181,14 @@ const CarCard = ({ car, index = 0 }: CarCardProps) => {
           className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-sm font-semibold flex items-center justify-center cursor-not-allowed border border-[#E5E7EB]"
         >
           Currently Rented
+        </button>
+      ) : isUnavailableForDates ? (
+        <button
+          type="button"
+          disabled
+          className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-xs font-semibold flex items-center justify-center cursor-not-allowed border border-[#E5E7EB]"
+        >
+          Unavailable for Selected Dates
         </button>
       ) : (
         <Link
