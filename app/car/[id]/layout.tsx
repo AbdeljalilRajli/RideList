@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getCarForMetadata } from "@/lib/getCarForMetadata";
 import { AGENCY_CONFIG } from "@/constants/agency";
 
