@@ -75,76 +75,77 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
       </section>
 
       {/* 2. Primary Showcase Section */}
-      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          {/* Left Column: Image stage & Thumbnail Gallery */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm relative overflow-hidden flex flex-col">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
-                <div className="min-w-0">
-                  <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
-                    {car.class || "Sedan"}
-                  </span>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#000000] tracking-tight break-words">
-                    {car.make} {car.model}
-                  </h1>
-                  {/* Mobile stacked price under title */}
-                  <div className="flex items-baseline gap-2 mt-2 sm:hidden">
-                    <span className="text-2xl font-extrabold text-[#FFA000] whitespace-nowrap">
+      <section className="w-full py-10">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
+            {/* Left Column: Image stage & Thumbnail Gallery */}
+            <div className="lg:col-span-7 flex flex-col h-full">
+              <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm relative overflow-hidden flex flex-col h-full">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 shrink-0">
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
+                      {car.class || "Sedan"}
+                    </span>
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#000000] tracking-tight break-words">
+                      {car.make} {car.model}
+                    </h1>
+                    {/* Mobile stacked price under title */}
+                    <div className="flex items-baseline gap-2 mt-2 sm:hidden">
+                      <span className="text-2xl font-extrabold text-[#FFA000] whitespace-nowrap">
+                        {car.price_per_day} DH
+                      </span>
+                      <span className="text-xs text-[#6C757D] whitespace-nowrap font-medium">per day</span>
+                    </div>
+                  </div>
+                  {/* Desktop right-aligned price */}
+                  <div className="hidden sm:block text-right shrink-0">
+                    <span className="text-3xl font-extrabold text-[#FFA000] block whitespace-nowrap">
                       {car.price_per_day} DH
                     </span>
-                    <span className="text-xs text-[#6C757D] whitespace-nowrap font-medium">per day</span>
+                    <span className="text-xs text-[#6C757D] whitespace-nowrap">per day</span>
                   </div>
                 </div>
-                {/* Desktop right-aligned price */}
-                <div className="hidden sm:block text-right shrink-0">
-                  <span className="text-3xl font-extrabold text-[#FFA000] block whitespace-nowrap">
-                    {car.price_per_day} DH
-                  </span>
-                  <span className="text-xs text-[#6C757D] whitespace-nowrap">per day</span>
+
+                {/* Main Image Stage - Grows to fill remaining height on desktop/tablet, natural height on mobile */}
+                <div className="relative w-full h-[320px] sm:h-[400px] lg:h-auto lg:flex-1 lg:min-h-[340px] bg-[#F8F8FB] rounded-2xl flex items-center justify-center p-6 my-4">
+                  <Image
+                    src={galleryImages[activeThumb] || mainCarImage}
+                    alt={`${car.make} ${car.model}`}
+                    fill
+                    priority
+                    className="object-contain p-4 transition-transform duration-500"
+                  />
+                </div>
+
+                {/* Thumbnail Angles - Anchored to bottom */}
+                <div className="grid grid-cols-3 gap-4 pt-2 shrink-0 mt-auto">
+                  {galleryImages.slice(0, 3).map((img, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveThumb(idx)}
+                      className={`relative h-24 rounded-xl overflow-hidden border-2 transition-all p-2 bg-[#F8F8FB] cursor-pointer ${
+                        activeThumb === idx ? "border-[#5937E0] shadow-md" : "border-[#E5E7EB] opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      <Image
+                        src={img}
+                        alt={`Angle ${idx + 1}`}
+                        fill
+                        className="object-contain p-2"
+                      />
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Main Image Stage */}
-              <div className="relative w-full h-[320px] sm:h-[400px] bg-[#F8F8FB] rounded-2xl flex items-center justify-center p-6 my-4">
-                <Image
-                  src={galleryImages[activeThumb] || mainCarImage}
-                  alt={`${car.make} ${car.model}`}
-                  fill
-                  priority
-                  className="object-contain p-4 transition-transform duration-500"
-                />
-              </div>
-
-              {/* Thumbnail Angles */}
-              <div className="grid grid-cols-3 gap-4 pt-2">
-                {galleryImages.slice(0, 3).map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveThumb(idx)}
-                    className={`relative h-24 rounded-xl overflow-hidden border-2 transition-all p-2 bg-[#F8F8FB] cursor-pointer ${
-                      activeThumb === idx ? "border-[#5937E0] shadow-md" : "border-[#E5E7EB] opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    <Image
-                      src={img}
-                      alt={`Angle ${idx + 1}`}
-                      fill
-                      className="object-contain p-2"
-                    />
-                  </button>
-                ))}
-              </div>
             </div>
-          </div>
 
-          {/* Right Column: Technical Specifications & Rent a car Button */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm">
-              <h2 className="text-xl font-bold text-[#000000] mb-6">
-                Technical Specification
-              </h2>
+            {/* Right Column: Technical Specifications & Rent a car Button */}
+            <div className="lg:col-span-5 flex flex-col h-full">
+              <div className="bg-white rounded-[24px] border border-[#E5E7EB] p-8 shadow-sm flex flex-col h-full">
+                <h2 className="text-xl font-bold text-[#000000] mb-6">
+                  Technical Specification
+                </h2>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
                 {car.body_type && (
@@ -263,34 +264,37 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
             </div>
           </div>
         </div>
+      </div>
       </section>
 
       {/* 3. Related Vehicles Section */}
-      <section className="max-w-[1440px] mx-auto px-6 lg:px-16 mt-16">
-        <div className="flex flex-col items-start gap-2.5 sm:flex-row sm:items-end sm:justify-between mb-8">
-          <div>
-            <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
-              Explore More
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#000000] tracking-tight">
-              Choose the car that suits you
-            </h2>
+      <section className="w-full mt-16">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-16">
+          <div className="flex flex-col items-start gap-2.5 sm:flex-row sm:items-end sm:justify-between mb-8">
+            <div>
+              <span className="text-xs font-bold text-[#5937E0] uppercase tracking-wider block mb-1">
+                Explore More
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#000000] tracking-tight">
+                Choose the car that suits you
+              </h2>
+            </div>
+            <Link
+              href="/fleet"
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#5937E0] hover:underline whitespace-nowrap"
+            >
+              <span>View all cars</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
-          <Link
-            href="/fleet"
-            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#5937E0] hover:underline whitespace-nowrap"
-          >
-            <span>View all cars</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {relatedCars.map((related, idx) => (
-            <CarCard key={related.id || `${related.make}-${related.model}-${idx}`} car={related} index={idx} />
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {relatedCars.map((related, idx) => (
+              <CarCard key={related.id || `${related.make}-${related.model}-${idx}`} car={related} index={idx} />
+            ))}
+          </div>
         </div>
       </section>
 
