@@ -55,8 +55,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/logo-icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logo-icon.png" />
         <meta name="theme-color" content="#3730a3" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
