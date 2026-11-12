@@ -5,6 +5,9 @@
  */
 
 export const AGENCY_CONFIG = {
+  // Production site URL used for metadataBase and absolute canonical/social sharing URLs
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://ridelist.vercel.app",
+
   // Physical Address
   address: process.env.NEXT_PUBLIC_AGENCY_ADDRESS || "Marrakech, Morocco",
 

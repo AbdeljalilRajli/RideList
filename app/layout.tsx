@@ -4,35 +4,29 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 import '@fortawesome/fontawesome-svg-core/styles.css';
-
+import { AGENCY_CONFIG } from "@/constants/agency";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://ridelist.ma'),
-  title: "RideList - Premium Car Rental Service",
-  description: "Discover and rent the best cars in the world. From luxury vehicles to economy cars, find your perfect ride with RideList.",
-  keywords: "car rental, luxury cars, vehicle rental, car booking, premium cars",
-  authors: [{ name: "RideList Team" }],
+  metadataBase: new URL(AGENCY_CONFIG.siteUrl),
+  title: {
+    default: "Ridelist | Premium Car Rental in Morocco",
+    template: "%s | Ridelist",
+  },
+  description: "Discover and rent the best cars across Morocco. Premium fleet, instant WhatsApp confirmation, transparent pricing, and doorstep delivery.",
+  keywords: "car rental, luxury cars, vehicle rental, car booking, premium cars, Morocco car rental, Marrakech car rental, Casablanca car rental",
+  authors: [{ name: "Ridelist Team" }],
   openGraph: {
-    title: "RideList - Premium Car Rental Service",
-    description: "Discover and rent the best cars in the world. From luxury vehicles to economy cars, find your perfect ride with RideList.",
-    url: "https://ridelist.com",
-    siteName: "RideList",
-    images: [
-      {
-        url: "/ridelist-mockup.webp",
-        width: 1200,
-        height: 630,
-        alt: "RideList - Premium Car Rental Platform",
-      },
-    ],
-    locale: "en_US",
     type: "website",
+    siteName: "Ridelist",
+    url: AGENCY_CONFIG.siteUrl,
+    title: "Ridelist | Premium Car Rental in Morocco",
+    description: "Discover and rent the best cars across Morocco. Premium fleet, instant WhatsApp confirmation, transparent pricing, and doorstep delivery.",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RideList - Premium Car Rental Service",
-    description: "Discover and rent the best cars in the world. From luxury vehicles to economy cars, find your perfect ride with RideList.",
-    images: ["/ridelist-mockup.webp"],
+    title: "Ridelist | Premium Car Rental in Morocco",
+    description: "Discover and rent the best cars across Morocco. Premium fleet, instant WhatsApp confirmation, transparent pricing, and doorstep delivery.",
   },
   robots: {
     index: true,
@@ -44,6 +38,9 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
+  },
+  alternates: {
+    canonical: "/",
   },
 };
 
