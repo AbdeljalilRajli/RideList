@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CarProps } from "@/types";
-import { getCarImage } from "@/lib/utils";
+import { getCarImage, getCarSlug } from "@/lib/utils";
 import {
   normalizeFuel,
   normalizeTransmission,
@@ -34,9 +34,7 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
     status = "available",
   } = car;
 
-  const carId =
-    id ||
-    `${make.toLowerCase()}-${model.toLowerCase().replace(/\s+/g, "-")}-${year}-${index}`;
+  const carSlug = getCarSlug(car);
   const carImage = getCarImage(car);
   const isRented = status === "rented";
   const isUnavailableForDates = isAvailableForDates === false && !isRented;
@@ -61,7 +59,7 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
 
       {/* Top: Car Image Link */}
       <Link
-        href={`/car/${carId}`}
+        href={`/car/${carSlug}`}
         tabIndex={-1}
         aria-hidden="true"
         className="w-full h-44 sm:h-48 flex items-center justify-center relative my-2 overflow-hidden cursor-pointer block focus:outline-none"
@@ -86,7 +84,7 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
           <div className="min-w-0 pr-2">
             <h3 className="text-lg font-bold text-black transition-colors truncate">
               <Link
-                href={`/car/${carId}`}
+                href={`/car/${carSlug}`}
                 className="hover:text-[#5937E0] [@media(hover:hover)]:group-hover:text-[#5937E0] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5937E0] focus-visible:ring-offset-2 rounded-sm cursor-pointer"
               >
                 {make} {model}
@@ -204,7 +202,7 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
         </button>
       ) : (
         <Link
-          href={`/car/${carId}`}
+          href={`/car/${carSlug}`}
           className="w-full h-11 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] hover:-translate-y-0.5 hover:shadow-md text-white text-sm font-bold flex items-center justify-center transition-all duration-200 ease-out active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5937E0] focus-visible:ring-offset-2"
         >
           View Details

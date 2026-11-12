@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { cars as staticCars } from "@/constants";
 import { CarProps } from "@/types";
+import { getCarSlug } from "@/lib/utils";
 
 /**
  * Loads a car by UUID or slug using the public anon client.
@@ -32,19 +33,42 @@ export async function getCarForMetadata(id: string): Promise<CarProps | null> {
       }
     }
 
-    // 2. Query all cars from Supabase and match slug or make/model
+    // 2. Query all cars from Supabase and match clean slug or make/model
     const { data: dbCars, error: dbError } = await supabase
       .from("cars")
       .select("*");
 
     if (dbCars && !dbError && dbCars.length > 0) {
+      const normalizedInput = id
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      // 2a. Exact slug match
+      const exactMatch = dbCars.find((c: any) => {
+        const slug = getCarSlug(c);
+        return c.id === id || slug === normalizedInput;
+      });
+
+      if (exactMatch) {
+        if (exactMatch.status === "hidden") {
+          return null;
+        }
+        return exactMatch as CarProps;
+      }
+
+      // 2b. Prefix or fuzzy slug match
       const matched = dbCars.find((c: any) => {
-        const slugPrefix = `${c.make?.toLowerCase()}-${c.model?.toLowerCase().replace(/\s+/g, "-")}`;
+        const slug = getCarSlug(c);
         return (
-          c.id === id ||
-          id.toLowerCase().startsWith(slugPrefix) ||
-          (id.toLowerCase().includes(c.make?.toLowerCase()) &&
-            id.toLowerCase().includes(c.model?.toLowerCase().replace(/\s+/g, "-")))
+          normalizedInput.startsWith(slug) ||
+          slug.startsWith(normalizedInput) ||
+          (c.make &&
+            c.model &&
+            normalizedInput.includes(
+              c.model.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+            ))
         );
       });
 
@@ -57,12 +81,22 @@ export async function getCarForMetadata(id: string): Promise<CarProps | null> {
     }
 
     // 3. Fallback: check static cars (legacy slug match)
+    const normalizedInput = id
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
     for (let index = 0; index < staticCars.length; index++) {
       const c = staticCars[index];
-      const computedId = `${c.make.toLowerCase()}-${c.model.toLowerCase().replace(/\s+/g, "-")}-${c.year}-${index}`;
+      const slug = getCarSlug(c);
+      const computedId = `${slug}-${c.year}-${index}`;
       if (
+        slug === normalizedInput ||
         computedId === id ||
-        id.toLowerCase().includes(c.model.toLowerCase().replace(/\s+/g, "-"))
+        normalizedInput.includes(
+          c.model.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+        )
       ) {
         if ((c as any).status === "hidden") {
           return null;

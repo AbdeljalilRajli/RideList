@@ -35,3 +35,16 @@ export const getCarImage = (car: CarProps, angle?: string): string => {
   const fileName = `${make} ${model}.webp`;
   return `/ridelist%20cars%20images/${encodeURIComponent(fileName)}`;
 };
+
+/**
+ * Returns a clean, human-readable, and SEO-friendly slug for vehicle details URLs.
+ * e.g., { make: "BMW", model: "3 Series" } -> "bmw-3-series"
+ */
+export function getCarSlug(car: { make?: string; model?: string; id?: string }): string {
+  if (!car?.make || !car?.model) return car?.id || "vehicle";
+  return `${car.make}-${car.model}`
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
