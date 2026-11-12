@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,25 +8,29 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, user, isAdmin } = useAuth();
+  const { signIn, user, isAdmin, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // If already logged in
-  if (user) {
-    if (isAdmin) {
-      router.replace("/admin");
-    } else {
-      router.replace("/dashboard");
+  // If already logged in, redirect cleanly in effect without flash
+  const isRedirecting = !authLoading && Boolean(user);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isAdmin) {
+        router.replace("/admin");
+      } else {
+        router.replace("/dashboard");
+      }
     }
-  }
+  }, [user, isAdmin, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setErrorMessage(null);
 
     try {
@@ -39,7 +43,7 @@ export default function LoginPage() {
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to sign in. Please verify your credentials.");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -75,6 +79,13 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {isRedirecting && (
+            <div className="mb-4 p-3.5 rounded-xl bg-purple-50 border border-purple-200 text-[#5937E0] text-xs font-semibold flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border-2 border-[#5937E0] border-t-transparent rounded-full animate-spin shrink-0" />
+              <span>Active session detected. Redirecting to your dashboard...</span>
+            </div>
+          )}
+
           {errorMessage && (
             <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold leading-relaxed">
               {errorMessage}
@@ -89,10 +100,11 @@ export default function LoginPage() {
               <input
                 type="email"
                 required
+                disabled={submitting || isRedirecting}
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0] disabled:opacity-60"
               />
             </div>
 
@@ -103,19 +115,22 @@ export default function LoginPage() {
               <input
                 type="password"
                 required
+                disabled={submitting || isRedirecting}
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0] disabled:opacity-60"
               />
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting || isRedirecting}
               className="w-full h-12 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
             >
-              {loading ? (
+              {isRedirecting ? (
+                <span>Redirecting...</span>
+              ) : submitting ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 "Sign In"

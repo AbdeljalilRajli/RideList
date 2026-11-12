@@ -69,17 +69,23 @@ export default function CustomerDashboardPage() {
 
   const agencyPhone = getAgencyWhatsAppNumber();
 
-  if (authLoading || (!user && loadingBookings)) {
+  // 1. While auth context is checking session
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-3 border-[#5937E0] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-10 h-10 border-3 border-[#5937E0] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#6C757D] text-sm font-medium">
             Loading your account...
           </p>
         </div>
       </div>
     );
+  }
+
+  // 2. Definitely logged out: return null while redirect completes (NEVER render dashboard UI/skeleton)
+  if (!user) {
+    return null;
   }
 
   const tabs = [

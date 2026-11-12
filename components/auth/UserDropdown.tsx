@@ -66,8 +66,18 @@ function UserDropdownContent({ onOpenLogin, className = "" }: UserDropdownProps)
   const firstName = fullName.split(/\s+/)[0] || fullName;
   const avatarLetter = (firstName.charAt(0) || "U").toUpperCase();
 
-  // 1. Loading state: Fixed-size skeleton placeholder to eliminate any flicker/layout jump
+  // 1. Loading state: Fixed-size placeholder to eliminate any flicker/layout jump
   if (loading) {
+    if (pathname === "/login" || pathname === "/signup") {
+      return (
+        <span
+          className="h-10 px-5 sm:px-6 rounded-full bg-[#5937E0] text-white font-semibold text-xs shadow-sm flex items-center justify-center shrink-0 opacity-80 select-none cursor-default"
+          aria-hidden="true"
+        >
+          Sign In
+        </span>
+      );
+    }
     return (
       <div
         className="h-10 w-28 sm:w-36 rounded-full bg-[#F1F1F6] animate-pulse border border-[#E5E7EB]"

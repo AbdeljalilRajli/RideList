@@ -5,37 +5,30 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const { user, isAdmin, loading: authLoading, refreshSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // If already logged in as admin, redirect to /admin
-  useEffect(() => {
-    async function checkExistingSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: adminRow } = await supabase
-          .from("admins")
-          .select("user_id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+  const isRedirectingAdmin = !authLoading && Boolean(user && isAdmin);
+  const isCustomerLoggedIn = !authLoading && Boolean(user && !isAdmin);
 
-        if (adminRow) {
-          router.replace("/admin");
-        }
-      }
+  useEffect(() => {
+    if (isRedirectingAdmin) {
+      router.replace("/admin");
     }
-    checkExistingSession();
-  }, [router]);
+  }, [isRedirectingAdmin, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       // 1. Sign in with Supabase Auth
@@ -56,17 +49,18 @@ export default function AdminLoginPage() {
         .maybeSingle();
 
       if (adminError || !adminRow) {
-        // Not an admin: sign them out immediately
+        // Not an admin: sign them out from this invalid admin attempt
         await supabase.auth.signOut();
         throw new Error("Access denied: Your account is not authorized as a RideList administrator.");
       }
 
-      // 3. Authorized admin
+      // 3. Authorized admin: refresh auth context and navigate
+      await refreshSession(false);
       router.replace("/admin");
     } catch (err: any) {
       setErrorMsg(err.message || "An error occurred during authentication.");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -102,6 +96,19 @@ export default function AdminLoginPage() {
             </p>
           </div>
 
+          {isRedirectingAdmin && (
+            <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-200 text-[#5937E0] text-xs font-semibold flex items-center gap-2.5">
+              <div className="w-3.5 h-3.5 border-2 border-[#5937E0] border-t-transparent rounded-full animate-spin shrink-0" />
+              <span>Active administrator session detected. Redirecting to Admin Portal...</span>
+            </div>
+          )}
+
+          {isCustomerLoggedIn && (
+            <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-medium leading-relaxed">
+              Currently signed in as customer (<strong>{user?.email}</strong>). Enter your administrator credentials below to access the Admin Portal.
+            </div>
+          )}
+
           {errorMsg && (
             <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium leading-relaxed">
               {errorMsg}
@@ -116,10 +123,11 @@ export default function AdminLoginPage() {
               <input
                 type="email"
                 required
+                disabled={submitting || isRedirectingAdmin}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@ridelist.com"
-                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#5937E0] focus:ring-1 focus:ring-[#5937E0] transition-colors"
+                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#5937E0] focus:ring-1 focus:ring-[#5937E0] transition-colors disabled:opacity-60"
               />
             </div>
 
@@ -130,19 +138,25 @@ export default function AdminLoginPage() {
               <input
                 type="password"
                 required
+                disabled={submitting || isRedirectingAdmin}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#5937E0] focus:ring-1 focus:ring-[#5937E0] transition-colors"
+                className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#5937E0] focus:ring-1 focus:ring-[#5937E0] transition-colors disabled:opacity-60"
               />
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting || isRedirectingAdmin}
               className="w-full h-12 mt-4 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white text-sm font-bold shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center cursor-pointer"
             >
-              {loading ? (
+              {isRedirectingAdmin ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Redirecting...</span>
+                </div>
+              ) : submitting ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Authenticating...</span>

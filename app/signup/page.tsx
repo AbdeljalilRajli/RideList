@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,22 +8,26 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signUp, user } = useAuth();
+  const { signUp, user, loading: authLoading } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  if (user) {
-    router.replace("/dashboard");
-  }
+  const isRedirecting = !authLoading && Boolean(user);
+
+  useEffect(() => {
+    if (isRedirecting) {
+      router.replace("/dashboard");
+    }
+  }, [isRedirecting, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -39,7 +43,7 @@ export default function SignupPage() {
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to create account. Please try again.");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -75,6 +79,13 @@ export default function SignupPage() {
             </p>
           </div>
 
+          {isRedirecting && (
+            <div className="mb-4 p-3.5 rounded-xl bg-purple-50 border border-purple-200 text-[#5937E0] text-xs font-semibold flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border-2 border-[#5937E0] border-t-transparent rounded-full animate-spin shrink-0" />
+              <span>Active session detected. Redirecting to your dashboard...</span>
+            </div>
+          )}
+
           {successMessage ? (
             <div className="text-center space-y-4 py-4">
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-xl font-bold">
@@ -106,10 +117,11 @@ export default function SignupPage() {
                 <input
                   type="text"
                   required
+                  disabled={submitting || isRedirecting}
                   placeholder="e.g. Youssef El Amrani"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0] disabled:opacity-60"
                 />
               </div>
 
@@ -120,10 +132,11 @@ export default function SignupPage() {
                 <input
                   type="email"
                   required
+                  disabled={submitting || isRedirecting}
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0] disabled:opacity-60"
                 />
               </div>
 
@@ -134,21 +147,24 @@ export default function SignupPage() {
                 <input
                   type="password"
                   required
+                  disabled={submitting || isRedirecting}
                   minLength={6}
                   placeholder="•••••••••••• (min. 6 characters)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0]"
+                  className="w-full h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black focus:outline-none focus:border-[#5937E0] disabled:opacity-60"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={submitting || isRedirecting}
                 className="w-full h-12 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
               >
-                {loading ? (
+                {submitting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : isRedirecting ? (
+                  "Redirecting..."
                 ) : (
                   "Create Account"
                 )}

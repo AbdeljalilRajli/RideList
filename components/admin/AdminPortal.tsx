@@ -14,6 +14,7 @@ import UserDropdown from "@/components/auth/UserDropdown";
 import { useAdminData } from "@/hooks/useAdminData";
 import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
 import { formatBodyType, formatSegment, normalizeFuel, normalizeTransmission } from "@/lib/carTaxonomy";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminPortalProps {
   initialTab?: "fleet" | "bookings";
@@ -25,8 +26,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
 
-  const [isAdminVerified, setIsAdminVerified] = useState(false);
-  const [authVerifying, setAuthVerifying] = useState(true);
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   // Tab state: prioritize route URL (/admin/bookings or /admin/cars), then searchParam, then prop
   const getResolvedTab = (): "fleet" | "bookings" => {
@@ -67,55 +67,14 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // 1. Verify Admin Session
+  // Redirect if not verified admin
   useEffect(() => {
-    async function verifyAdmin() {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.user) {
-          router.replace("/admin/login");
-          return;
-        }
-
-        const { data: adminRow, error: adminErr } = await supabase
-          .from("admins")
-          .select("user_id, email")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        if (adminErr || !adminRow) {
-          await supabase.auth.signOut();
-          router.replace("/admin/login");
-          return;
-        }
-
-        setIsAdminVerified(true);
-      } catch (err) {
-        console.error("Admin verification error:", err);
-        router.replace("/admin/login");
-      } finally {
-        setAuthVerifying(false);
-      }
+    if (!authLoading && (!user || !isAdmin)) {
+      router.replace("/admin/login");
     }
+  }, [user, isAdmin, authLoading, router]);
 
-    verifyAdmin();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_OUT" || !session) {
-          router.replace("/admin/login");
-        }
-      }
-    );
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [router]);
-
-  // 2. Shared Single Source of Truth Hook for Fleet & Bookings with Realtime
+  // Shared Single Source of Truth Hook for Fleet & Bookings with Realtime
   const {
     cars,
     bookings,
@@ -130,7 +89,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
     updateCarStatus,
     saveCar,
     deleteCar,
-  } = useAdminData(isAdminVerified);
+  } = useAdminData(isAdmin);
 
   // Quick Status Toggle directly from Table with optimistic rollback
   const handleStatusChange = async (
@@ -179,17 +138,21 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
     }
   };
 
-  if (authVerifying) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-3 border-[#5937E0] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-10 h-10 border-3 border-[#5937E0] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#6C757D] text-sm font-medium">
             Verifying administrator session...
           </p>
         </div>
       </div>
     );
+  }
+
+  if (!user || !isAdmin) {
+    return null;
   }
 
   const fleetTabs = [

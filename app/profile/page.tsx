@@ -102,7 +102,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center pt-28">
         <div className="text-center">
@@ -111,6 +111,10 @@ export default function ProfilePage() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   const avatarLetter = (fullName.trim().charAt(0) || user.email?.charAt(0) || "U").toUpperCase();
