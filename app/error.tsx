@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import Reveal from "@/components/Reveal";
 
 export default function ErrorPage({
   error,
@@ -43,71 +42,34 @@ export default function ErrorPage({
             }}
           />
 
-          {/* Layer 3: Main Content Container (Vertically centered in section) */}
-          <div className="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 flex-1 flex flex-col justify-center py-10 lg:py-16">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-              {/* Left Column: 500 number, Headline, Subtitle, Buttons */}
-              <div className="lg:col-span-6 xl:col-span-5 flex flex-col items-start w-full z-20">
-                <Reveal triggerOnLoad delay={50} variant="fade-up" className="w-full">
-                  <div className="text-[clamp(6rem,12vw,11.25rem)] font-black tracking-tight leading-none text-white mb-2 sm:mb-3 select-none">
-                    5<span className="text-[#FFA000]">0</span>0
-                  </div>
-                </Reveal>
+          {/* Layer 3: Centered Content Container */}
+          <div className="relative z-10 w-full max-w-[840px] mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col justify-center items-center text-center py-12 lg:py-20">
+            <div className="text-[clamp(6.5rem,14vw,12.5rem)] font-black tracking-tight leading-none text-white mb-2 sm:mb-4 select-none">
+              5<span className="text-[#FFA000]">0</span>0
+            </div>
 
-                <Reveal triggerOnLoad delay={120} variant="fade-up" className="w-full">
-                  <h1 className="text-[clamp(2rem,4vw,3.25rem)] font-extrabold leading-[1.18] tracking-tight text-white mb-4 sm:mb-6 [text-wrap:balance]">
-                    Something went wrong
-                  </h1>
-                </Reveal>
+            <h1 className="text-[clamp(2rem,4.5vw,3.5rem)] font-extrabold leading-[1.18] tracking-tight text-white mb-4 sm:mb-6 [text-wrap:balance]">
+              Something went wrong
+            </h1>
 
-                <Reveal triggerOnLoad delay={180} variant="fade-up" className="w-full">
-                  <p className="text-white/85 text-base sm:text-lg md:text-xl leading-relaxed mb-8 max-w-[500px] font-normal">
-                    An unexpected error occurred while loading this page. Let&apos;s get you back on the road.
-                  </p>
-                </Reveal>
+            <p className="text-white/85 text-base sm:text-lg md:text-xl leading-relaxed mb-8 sm:mb-10 max-w-[560px] mx-auto font-normal [text-wrap:balance]">
+              An unexpected error occurred while loading this page. Let&apos;s get you back on the road.
+            </p>
 
-                {/* Stackable CTA Buttons */}
-                <Reveal triggerOnLoad delay={240} variant="fade-up" className="w-full sm:w-auto">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-                    <button
-                      onClick={() => reset()}
-                      className="h-14 px-8 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] text-white font-bold text-base flex items-center justify-center transition-all shadow-lg hover:-translate-y-0.5 active:scale-95 cursor-pointer"
-                    >
-                      Try again
-                    </button>
-                    <Link
-                      href="/"
-                      className="h-14 px-8 rounded-full border-2 border-white text-white hover:bg-white/10 font-bold text-base flex items-center justify-center transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
-                    >
-                      Back to home
-                    </Link>
-                  </div>
-                </Reveal>
-              </div>
-
-              {/* Right Column: Hero cars cutout (Audi + Tesla) sitting slightly lower and bleeding off edge on desktop */}
-              <div className="lg:col-span-6 xl:col-span-7 flex justify-center lg:justify-end items-center relative z-10 w-full mt-4 lg:mt-0">
-                <Reveal
-                  triggerOnLoad
-                  delay={200}
-                  variant="fade-scale"
-                  className="w-full max-w-[480px] sm:max-w-[560px] lg:max-w-none lg:w-[clamp(440px,50vw,820px)] lg:-mr-8 xl:-mr-16 2xl:-mr-20 lg:translate-y-6"
-                >
-                  <div className="relative w-full aspect-[962/409]">
-                    {/* Soft Ground Shadow under tires */}
-                    <div className="absolute -bottom-3 sm:-bottom-4 left-1/2 -translate-x-1/2 w-[85%] h-6 sm:h-8 bg-black/45 blur-xl rounded-full pointer-events-none" />
-
-                    <Image
-                      src="/hero-cars-cutout.webp"
-                      alt="Audi and Tesla cars"
-                      fill
-                      priority
-                      unoptimized
-                      className="object-contain object-bottom drop-shadow-[0_20px_35px_rgba(0,0,0,0.35)]"
-                    />
-                  </div>
-                </Reveal>
-              </div>
+            {/* Stackable Centered CTA Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 w-full sm:w-auto">
+              <button
+                onClick={() => reset()}
+                className="h-14 px-9 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] text-white font-bold text-base flex items-center justify-center transition-all shadow-lg hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+              >
+                Try again
+              </button>
+              <Link
+                href="/"
+                className="h-14 px-9 rounded-full border-2 border-white text-white hover:bg-white/10 font-bold text-base flex items-center justify-center transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+              >
+                Back to home
+              </Link>
             </div>
           </div>
 
