@@ -46,29 +46,31 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
     : carClass || "Sedan";
 
   return (
-    <article className="relative flex flex-col bg-white rounded-[16px] border border-[#E5E7EB] shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_rgba(89,55,224,0.14)] hover:-translate-y-1 transition-all duration-200 ease-out overflow-hidden group p-6 justify-between">
+    <article className="relative flex flex-col bg-white rounded-[16px] border border-[#E5E7EB] shadow-[0_2px_10px_rgba(0,0,0,0.03)] [@media(hover:hover)]:hover:shadow-[0_12px_28px_rgba(89,55,224,0.14)] [@media(hover:hover)]:hover:-translate-y-1 transition-all duration-200 ease-out overflow-hidden group p-6 justify-between focus-within:ring-2 focus-within:ring-[#5937E0] focus-within:ring-offset-2 [@media(hover:hover)]:cursor-pointer motion-reduce:transition-none motion-reduce:hover:transform-none">
       {/* Rented or Date-Unavailable Badge */}
       {isRented && (
-        <span className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-[#181524]/90 backdrop-blur-sm text-white text-[11px] font-bold tracking-wider uppercase shadow-md">
+        <span className="absolute top-4 right-4 z-20 px-3 py-1 rounded-full bg-[#181524]/90 backdrop-blur-sm text-white text-[11px] font-bold tracking-wider uppercase shadow-md pointer-events-none select-none">
           Rented
         </span>
       )}
       {isUnavailableForDates && (
-        <span className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-amber-600/95 backdrop-blur-sm text-white text-[10px] font-bold tracking-wider uppercase shadow-md">
+        <span className="absolute top-4 right-4 z-20 px-3 py-1 rounded-full bg-amber-600/95 backdrop-blur-sm text-white text-[10px] font-bold tracking-wider uppercase shadow-md pointer-events-none select-none">
           Unavailable for Dates
         </span>
       )}
 
       {/* Top: Car Image */}
-      <div className="w-full h-44 sm:h-48 flex items-center justify-center relative my-2 overflow-hidden">
+      <div className="w-full h-44 sm:h-48 flex items-center justify-center relative my-2 overflow-hidden pointer-events-none">
         <Image
           src={carImage}
           alt={`${make} ${model}`}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           priority={index < 3}
-          className={`object-contain p-2 transition-transform duration-500 ${
-            isRented || isUnavailableForDates ? "opacity-75 grayscale-[20%]" : "group-hover:scale-105"
+          className={`object-contain p-2 transition-transform duration-500 motion-reduce:transition-none motion-reduce:transform-none ${
+            isRented || isUnavailableForDates
+              ? "opacity-75 grayscale-[20%]"
+              : "[@media(hover:hover)]:group-hover:scale-105"
           }`}
         />
       </div>
@@ -77,14 +79,19 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
       <div className="mt-4">
         <div className="flex items-baseline justify-between">
           <div className="min-w-0 pr-2">
-            <h3 className="text-lg font-bold text-black group-hover:text-[#5937E0] transition-colors truncate">
-              {make} {model}
+            <h3 className="text-lg font-bold text-black [@media(hover:hover)]:group-hover:text-[#5937E0] transition-colors truncate">
+              <Link
+                href={`/car/${carId}`}
+                className="focus:outline-none after:absolute after:inset-0 after:z-10 after:content-['']"
+              >
+                {make} {model}
+              </Link>
             </h3>
-            <p className="text-xs text-[#6C757D] capitalize mt-0.5 truncate">
+            <p className="text-xs text-[#6C757D] capitalize mt-0.5 truncate pointer-events-none">
               {subtitle}
             </p>
           </div>
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 pointer-events-none select-none">
             <span className="text-xl font-bold text-[#FFA000] whitespace-nowrap">
               {price_per_day} DH
             </span>
@@ -95,10 +102,10 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-[#E5E7EB] my-4"></div>
+        <div className="border-t border-[#E5E7EB] my-4 pointer-events-none"></div>
 
         {/* 4 Specs with Icons: Seats, Transmission, Fuel, Km Policy (replaces Air Conditioner) */}
-        <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 text-xs text-[#6C757D] font-medium pb-5">
+        <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 text-xs text-[#6C757D] font-medium pb-5 pointer-events-none">
           {/* 1. Seats */}
           <div className="flex items-center gap-1.5 truncate" title={`${seats || 5} Seats`}>
             <svg
@@ -173,30 +180,28 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
         </div>
       </div>
 
-      {/* Bottom Button */}
+      {/* Bottom Button (non-interactive presentation, clicks hit stretched link overlay) */}
       {isRented ? (
-        <button
-          type="button"
-          disabled
-          className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-sm font-semibold flex items-center justify-center cursor-not-allowed border border-[#E5E7EB]"
+        <div
+          aria-hidden="true"
+          className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-sm font-semibold flex items-center justify-center border border-[#E5E7EB] select-none pointer-events-none"
         >
           Currently Rented
-        </button>
+        </div>
       ) : isUnavailableForDates ? (
-        <button
-          type="button"
-          disabled
-          className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-xs font-semibold flex items-center justify-center cursor-not-allowed border border-[#E5E7EB]"
+        <div
+          aria-hidden="true"
+          className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-xs font-semibold flex items-center justify-center border border-[#E5E7EB] select-none pointer-events-none"
         >
           Unavailable for Selected Dates
-        </button>
+        </div>
       ) : (
-        <Link
-          href={`/car/${carId}`}
-          className="w-full h-11 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] hover:-translate-y-0.5 hover:shadow-md text-white text-sm font-bold flex items-center justify-center transition-all duration-200 ease-out active:scale-[0.99]"
+        <div
+          aria-hidden="true"
+          className="w-full h-11 rounded-[50px] bg-[#5937E0] text-white text-sm font-bold flex items-center justify-center transition-all duration-200 ease-out select-none pointer-events-none shadow-sm [@media(hover:hover)]:group-hover:bg-[#4A2CC7] [@media(hover:hover)]:group-hover:-translate-y-0.5 [@media(hover:hover)]:group-hover:shadow-md motion-reduce:transition-none motion-reduce:transform-none"
         >
           View Details
-        </Link>
+        </div>
       )}
     </article>
   );
