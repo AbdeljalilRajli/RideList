@@ -16,6 +16,7 @@ import {
   formatBodyType,
   formatSegment,
 } from "@/lib/carTaxonomy";
+import DateRangePicker from "@/components/common/DateRangePicker";
 
 export default function FleetPage() {
   return (
@@ -705,37 +706,21 @@ function FleetContent() {
             {/* Desktop Filters Row (Hidden on mobile, present in drawer) */}
             <div className="hidden lg:grid grid-cols-12 gap-3 pt-3 border-t border-[#E5E7EB] items-center">
               {/* Dates Selector */}
-              <div className="col-span-4 flex items-center gap-2">
-                <div className="relative flex-1">
-                  <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
-                    Pickup Date
-                  </label>
-                  <input
-                    type="date"
-                    value={pickupDate}
-                    min={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => {
-                      setPickupDate(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black focus:outline-none focus:border-[#5937E0]"
-                  />
-                </div>
-                <div className="relative flex-1">
-                  <label className="block text-[10px] font-bold text-[#6C757D] uppercase tracking-wider mb-1">
-                    Return Date
-                  </label>
-                  <input
-                    type="date"
-                    value={returnDate}
-                    min={pickupDate || new Date().toISOString().split("T")[0]}
-                    onChange={(e) => {
-                      setReturnDate(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-medium text-black focus:outline-none focus:border-[#5937E0]"
-                  />
-                </div>
+              <div className="col-span-4">
+                <DateRangePicker
+                  startDate={pickupDate}
+                  endDate={returnDate}
+                  onChange={({ startDate, endDate }) => {
+                    setPickupDate(startDate);
+                    setReturnDate(endDate);
+                    setCurrentPage(1);
+                  }}
+                  layout="split"
+                  showLabels={true}
+                  pickupLabel="Pickup Date"
+                  returnLabel="Return Date"
+                  buttonClassName="!h-10 !rounded-xl text-[11px]"
+                />
               </div>
 
               {/* Segment Dropdown */}
@@ -1205,35 +1190,20 @@ function FleetContent() {
             <div className="overflow-y-auto p-6 space-y-6 flex-1 text-xs">
               {/* Dates */}
               <div>
-                <label className="block text-xs font-bold text-black mb-2">Rental Dates</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-[10px] text-[#6C757D] block mb-1">Pickup</span>
-                    <input
-                      type="date"
-                      value={pickupDate}
-                      min={new Date().toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        setPickupDate(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-medium text-black"
-                    />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#6C757D] block mb-1">Return</span>
-                    <input
-                      type="date"
-                      value={returnDate}
-                      min={pickupDate || new Date().toISOString().split("T")[0]}
-                      onChange={(e) => {
-                        setReturnDate(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full h-10 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] font-medium text-black"
-                    />
-                  </div>
-                </div>
+                <DateRangePicker
+                  startDate={pickupDate}
+                  endDate={returnDate}
+                  onChange={({ startDate, endDate }) => {
+                    setPickupDate(startDate);
+                    setReturnDate(endDate);
+                    setCurrentPage(1);
+                  }}
+                  layout="split"
+                  showLabels={true}
+                  pickupLabel="Pickup Date"
+                  returnLabel="Return Date"
+                  buttonClassName="!h-10 !rounded-xl text-xs"
+                />
               </div>
 
               {/* Price Range */}

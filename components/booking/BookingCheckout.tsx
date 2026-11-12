@@ -13,6 +13,7 @@ import {
   buildWhatsAppBookingUrl,
   LocationOption,
 } from "@/constants/booking";
+import DateRangePicker from "@/components/common/DateRangePicker";
 
 interface BookingCheckoutProps {
   car: CarProps;
@@ -357,63 +358,51 @@ export default function BookingCheckout({
                     <span className="w-2 h-2 rounded-full bg-[#5937E0]"></span>
                     Rental Dates & Schedule
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Pickup Date */}
-                    <div>
-                      <label className="block text-xs font-semibold text-[#6C757D] mb-1">
-                        Pickup Date
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        min={todayStr}
-                        value={pickupDate}
-                        onChange={(e) => setPickupDate(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
-                      />
-                    </div>
+                  <div className="space-y-4">
+                    {/* Unified DateRangePicker for Pickup & Return */}
+                    <DateRangePicker
+                      startDate={pickupDate}
+                      endDate={returnDate}
+                      onChange={({ startDate, endDate }) => {
+                        setPickupDate(startDate);
+                        setReturnDate(endDate);
+                      }}
+                      layout="split"
+                      showLabels={true}
+                      pickupLabel="Pickup Date"
+                      returnLabel="Return Date"
+                      buttonClassName="!bg-white !rounded-xl"
+                    />
 
-                    {/* Pickup Time */}
-                    <div>
-                      <label className="block text-xs font-semibold text-[#6C757D] mb-1">
-                        Pickup Time
-                      </label>
-                      <input
-                        type="time"
-                        required
-                        value={pickupTime}
-                        onChange={(e) => setPickupTime(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
-                      />
-                    </div>
+                    {/* Pickup & Return Time Pickers */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Pickup Time */}
+                      <div>
+                        <label className="block text-xs font-semibold text-[#6C757D] mb-1">
+                          Pickup Time
+                        </label>
+                        <input
+                          type="time"
+                          required
+                          value={pickupTime}
+                          onChange={(e) => setPickupTime(e.target.value)}
+                          className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                        />
+                      </div>
 
-                    {/* Return Date */}
-                    <div>
-                      <label className="block text-xs font-semibold text-[#6C757D] mb-1">
-                        Return Date
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        min={pickupDate || todayStr}
-                        value={returnDate}
-                        onChange={(e) => setReturnDate(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
-                      />
-                    </div>
-
-                    {/* Return Time */}
-                    <div>
-                      <label className="block text-xs font-semibold text-[#6C757D] mb-1">
-                        Return Time
-                      </label>
-                      <input
-                        type="time"
-                        required
-                        value={returnTime}
-                        onChange={(e) => setReturnTime(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
-                      />
+                      {/* Return Time */}
+                      <div>
+                        <label className="block text-xs font-semibold text-[#6C757D] mb-1">
+                          Return Time
+                        </label>
+                        <input
+                          type="time"
+                          required
+                          value={returnTime}
+                          onChange={(e) => setReturnTime(e.target.value)}
+                          className="w-full h-11 px-3.5 rounded-xl bg-white border border-[#E5E7EB] text-[16px] sm:text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0]"
+                        />
+                      </div>
                     </div>
                   </div>
 

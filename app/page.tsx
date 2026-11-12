@@ -12,6 +12,7 @@ import { CarProps } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Reveal from "@/components/Reveal";
+import DateRangePicker from "@/components/common/DateRangePicker";
 
 export default function Home() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function Home() {
   const [returnPlace, setReturnPlace] = useState("");
   const [rentalDate, setRentalDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
+  const [dateError, setDateError] = useState<string | null>(null);
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
@@ -30,6 +32,22 @@ export default function Home() {
 
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setDateError(null);
+
+    // Date range validation
+    if (rentalDate && !returnDate) {
+      setDateError("Please select a return date.");
+      return;
+    }
+    if (!rentalDate && returnDate) {
+      setDateError("Please select a pick-up date.");
+      return;
+    }
+    if (rentalDate && returnDate && returnDate <= rentalDate) {
+      setDateError("Return date must be at least 1 day after pick-up date.");
+      return;
+    }
+
     const params = new URLSearchParams();
     if (carType && carType !== "all") params.set("type", carType.toLowerCase());
     if (rentalDate) params.set("pickup_date", rentalDate);
@@ -203,57 +221,25 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Field 4: Rental date / Pick-up date */}
-                    <div className="relative w-full h-11">
-                      <input
-                        type="date"
-                        min={todayStr}
-                        value={rentalDate}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setRentalDate(val);
-                          if (returnDate && val > returnDate) {
-                            setReturnDate(val);
-                          }
-                        }}
-                        className={`w-full h-11 px-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-[16px] sm:text-xs font-medium focus:outline-none focus:border-[#5937E0] cursor-pointer appearance-none ${
-                          !rentalDate ? "text-transparent" : "text-black"
-                        }`}
-                      />
-                      {!rentalDate && (
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] sm:text-xs font-medium text-[#6C757D] pointer-events-none select-none">
-                          Pick-up date
-                        </span>
-                      )}
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#6C757D]">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    </div>
+                    {/* Fields 4 & 5: Pick-up date & Return date (Replaced with Custom DateRangePicker) */}
+                    <DateRangePicker
+                      startDate={rentalDate}
+                      endDate={returnDate}
+                      onChange={({ startDate, endDate }) => {
+                        setRentalDate(startDate);
+                        setReturnDate(endDate);
+                        setDateError(null);
+                      }}
+                      layout="stacked"
+                      pickupPlaceholder="Pick-up date"
+                      returnPlaceholder="Return date"
+                    />
 
-                    {/* Field 5: Return date */}
-                    <div className="relative w-full h-11">
-                      <input
-                        type="date"
-                        min={rentalDate || todayStr}
-                        value={returnDate}
-                        onChange={(e) => setReturnDate(e.target.value)}
-                        className={`w-full h-11 px-4 pr-10 rounded-lg bg-[#F8F8FB] border border-[#E5E7EB] text-[16px] sm:text-xs font-medium focus:outline-none focus:border-[#5937E0] cursor-pointer appearance-none ${
-                          !returnDate ? "text-transparent" : "text-black"
-                        }`}
-                      />
-                      {!returnDate && (
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] sm:text-xs font-medium text-[#6C757D] pointer-events-none select-none">
-                          Return date
-                        </span>
-                      )}
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#6C757D]">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                    {dateError && (
+                      <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold leading-relaxed">
+                        {dateError}
                       </div>
-                    </div>
+                    )}
 
                     {/* Submit Button: Orange "Book now" pill */}
                     <button

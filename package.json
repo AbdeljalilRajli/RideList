@@ -14,9 +14,11 @@
     "@headlessui/react": "^2.1.9",
     "@supabase/supabase-js": "^2.119.0",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "framer-motion": "^11.11.1",
     "next": "^14.2.35",
     "react": "^18",
+    "react-day-picker": "^10.0.2",
     "react-dom": "^18",
     "tailwind-merge": "^2.5.3"
   },

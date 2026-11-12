@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap");
+@import "react-day-picker/style.css";
 
 @tailwind base;
 @tailwind components;
@@ -404,4 +405,87 @@ article.group:hover {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* =========================================================================
+   RideList Brand Styling for React DayPicker (v10)
+   ========================================================================= */
+.rdp-root {
+  --rdp-accent-color: #5937E0;
+  --rdp-accent-background-color: #EEEDF9;
+  --rdp-day-height: 38px;
+  --rdp-day-width: 38px;
+  --rdp-day_button-height: 36px;
+  --rdp-day_button-width: 36px;
+  --rdp-day_button-border-radius: 9999px;
+  --rdp-today-color: #5937E0;
+  --rdp-range_middle-background-color: #EEEDF9;
+  --rdp-range_middle-color: #5937E0;
+  --rdp-range_start-date-background-color: #5937E0;
+  --rdp-range_start-color: #FFFFFF;
+  --rdp-range_end-date-background-color: #5937E0;
+  --rdp-range_end-color: #FFFFFF;
+  --rdp-months-gap: 1.5rem;
+  font-family: inherit;
+  margin: 0 auto;
+}
+
+.rdp-month_caption {
+  font-weight: 700;
+  font-size: 14px;
+  color: #000000;
+  margin-bottom: 0.75rem;
+}
+
+.rdp-weekday {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #6C757D;
+}
+
+.rdp-day_button {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1F2937;
+  transition: all 0.15s ease;
+}
+
+.rdp-day_button:hover:not([disabled]) {
+  background-color: #EEEDF9;
+  color: #5937E0;
+}
+
+.rdp-today:not(.rdp-selected) .rdp-day_button {
+  font-weight: 800;
+  color: #5937E0;
+  border: 1.5px solid #5937E0;
+}
+
+.rdp-selected .rdp-day_button {
+  font-weight: 700;
+}
+
+.rdp-disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.rdp-button_next,
+.rdp-button_previous {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6C757D;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.rdp-button_next:hover,
+.rdp-button_previous:hover {
+  background-color: #EEEDF9;
+  color: #5937E0;
 }
