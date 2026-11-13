@@ -370,6 +370,42 @@ export function useAdminData(enabled: boolean = true) {
     }
   };
 
+  const deleteBooking = async (bookingId: string) => {
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking) return;
+
+    if (booking.status === "pending" || booking.status === "confirmed") {
+      throw new Error(
+        `Cannot delete reservation ${booking.reference_code}: Active bookings (Pending or Confirmed) must be cancelled or rejected first.`
+      );
+    }
+
+    const originalBookings = [...bookings];
+    setActionLoadingId(bookingId);
+
+    // Optimistically update local state immediately
+    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+
+    try {
+      const { error } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", bookingId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setLastUpdated(new Date());
+    } catch (err: any) {
+      // Rollback to original state on failure
+      setBookings(originalBookings);
+      throw err;
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   return {
     cars,
     bookings,
@@ -384,5 +420,6 @@ export function useAdminData(enabled: boolean = true) {
     updateCarStatus,
     saveCar,
     deleteCar,
+    deleteBooking,
   };
 }

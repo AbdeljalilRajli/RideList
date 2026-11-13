@@ -89,6 +89,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
     updateCarStatus,
     saveCar,
     deleteCar,
+    deleteBooking,
   } = useAdminData(isAdmin);
 
   // Quick Status Toggle directly from Table with optimistic rollback
@@ -754,6 +755,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
             lastUpdated={lastUpdated}
             onRefresh={refresh}
             onUpdateStatus={updateBookingStatus}
+            onDeleteBooking={deleteBooking}
             actionLoadingId={actionLoadingId}
             onToast={showToast}
           />

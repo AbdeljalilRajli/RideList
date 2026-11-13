@@ -15,6 +15,7 @@ interface BookingTableProps {
     booking: AdminBooking,
     newStatus: "confirmed" | "rejected" | "completed" | "cancelled"
   ) => Promise<void>;
+  onDeleteBooking?: (bookingId: string) => Promise<void>;
   actionLoadingId: string | null;
   onToast?: (text: string, type?: "success" | "error") => void;
 }
@@ -37,6 +38,7 @@ export default function BookingTable({
   lastUpdated,
   onRefresh,
   onUpdateStatus,
+  onDeleteBooking,
   actionLoadingId,
   onToast,
 }: BookingTableProps) {
@@ -49,6 +51,29 @@ export default function BookingTable({
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(
     null
   );
+
+  // Deletion confirmation state
+  const [bookingToDelete, setBookingToDelete] = useState<AdminBooking | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!bookingToDelete || !onDeleteBooking) return;
+    setIsDeleting(true);
+    const refCode = bookingToDelete.reference_code;
+    try {
+      await onDeleteBooking(bookingToDelete.id);
+      setBookingToDelete(null);
+      setSelectedBooking(null);
+      onToast?.(`Reservation ${refCode} has been permanently deleted.`, "success");
+    } catch (err: any) {
+      console.error("Delete booking error:", err);
+      onToast?.(err.message || "Failed to delete reservation.", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Unfiltered stats: always computed from the complete unfiltered bookings list
   const stats = useMemo(() => {
@@ -625,12 +650,157 @@ export default function BookingTable({
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-3 border-t border-[#E5E7EB] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Delete button (only allowed for completed, cancelled, rejected) */}
+              {selectedBooking.status === "completed" ||
+              selectedBooking.status === "cancelled" ||
+              selectedBooking.status === "rejected" ? (
+                <button
+                  type="button"
+                  onClick={() => setBookingToDelete(selectedBooking)}
+                  className="px-4 py-2 rounded-full border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <svg
+                    className="w-4 h-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  <span>Delete permanently</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    title="Active reservations cannot be deleted. Cancel or reject first."
+                    className="px-4 py-2 rounded-full border border-[#E5E7EB] text-[#ADB5BD] bg-[#F8F8FB] text-xs font-medium cursor-not-allowed flex items-center justify-center gap-1.5 opacity-60"
+                  >
+                    <svg
+                      className="w-4 h-4 shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                    <span>Delete permanently</span>
+                  </button>
+                  <span className="text-[11px] text-[#6C757D] leading-tight">
+                    Cancel or reject first to delete
+                  </span>
+                </div>
+              )}
+
               <button
+                type="button"
                 onClick={() => setSelectedBooking(null)}
-                className="px-6 py-2 rounded-full bg-[#5937E0] text-white text-xs font-bold cursor-pointer"
+                className="px-6 py-2 rounded-full bg-[#5937E0] hover:bg-[#4a2ec4] text-white text-xs font-bold transition-all cursor-pointer self-end sm:self-auto"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {bookingToDelete && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[24px] border border-[#E5E7EB] shadow-2xl p-6 sm:p-8 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            {/* Warning Icon */}
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-black font-['Work_Sans',sans-serif] mb-1">
+                Delete Reservation Permanently?
+              </h3>
+              <p className="text-xs text-[#6C757D] leading-relaxed">
+                This action cannot be undone. The booking record will be permanently deleted from the database.
+              </p>
+            </div>
+
+            {/* Reservation Summary Details */}
+            <div className="p-4 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-[#6C757D]">Reference Code:</span>
+                <strong className="font-mono font-bold text-[#5937E0] text-sm">
+                  {bookingToDelete.reference_code}
+                </strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#6C757D]">Customer Name:</span>
+                <strong className="text-black font-semibold">
+                  {bookingToDelete.customer_name}
+                </strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#6C757D]">Car:</span>
+                <strong className="text-black font-semibold text-right">
+                  {bookingToDelete.cars
+                    ? `${bookingToDelete.cars.make} ${bookingToDelete.cars.model} (${bookingToDelete.cars.year})`
+                    : "Vehicle not assigned"}
+                </strong>
+              </div>
+              <div className="flex justify-between items-center pt-1 border-t border-[#E5E7EB]">
+                <span className="text-[#6C757D]">Status:</span>
+                <span className="capitalize font-semibold text-black">
+                  {bookingToDelete.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setBookingToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-full border border-[#E5E7EB] text-xs font-bold text-[#6C757D] hover:bg-[#F8F8FB] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete Permanently</span>
+                )}
               </button>
             </div>
           </div>
