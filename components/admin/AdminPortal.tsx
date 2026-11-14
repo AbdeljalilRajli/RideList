@@ -10,10 +10,12 @@ import CarFormModal from "@/components/admin/CarFormModal";
 import DeleteCarModal from "@/components/admin/DeleteCarModal";
 import MigrateImagesModal from "@/components/admin/MigrateImagesModal";
 import BookingTable from "@/components/admin/BookingTable";
+import BlockDatesModal from "@/components/admin/BlockDatesModal";
 import UserDropdown from "@/components/auth/UserDropdown";
 import { useAdminData } from "@/hooks/useAdminData";
 import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
 import { formatBodyType, formatSegment, normalizeFuel, normalizeTransmission } from "@/lib/carTaxonomy";
+import { formatDayMonth } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminPortalProps {
@@ -55,6 +57,8 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
   const [carToDelete, setCarToDelete] = useState<CarProps | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isMigrateModalOpen, setIsMigrateModalOpen] = useState(false);
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [carToBlock, setCarToBlock] = useState<CarProps | null>(null);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<{
@@ -78,6 +82,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
   const {
     cars,
     bookings,
+    rentedNowMap,
     loading,
     isRefreshing,
     lastUpdated,
@@ -90,6 +95,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
     saveCar,
     deleteCar,
     deleteBooking,
+    blockCarDates,
   } = useAdminData(isAdmin);
 
   // Quick Status Toggle directly from Table with optimistic rollback
@@ -114,12 +120,19 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
           .toLowerCase()
           .includes(searchQuery.toLowerCase().trim());
 
+      const isRentedNow = Boolean(car.id && rentedNowMap[car.id]);
       const matchesStatus =
-        statusFilter === "all" ? true : car.status === statusFilter;
+        statusFilter === "all"
+          ? true
+          : statusFilter === "rented"
+          ? isRentedNow
+          : statusFilter === "available"
+          ? car.status === "available" && !isRentedNow
+          : car.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
-  }, [cars, searchQuery, statusFilter]);
+  }, [cars, searchQuery, statusFilter, rentedNowMap]);
 
   // Count cars with legacy local images
   const localImagesCount = useMemo(() => {
@@ -651,44 +664,74 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
 
                             {/* 4. Quick Status Switcher */}
                             <td className="py-4 px-6">
-                              {actionLoadingId === car.id ? (
-                                <div className="flex items-center gap-1.5 text-xs text-[#5937E0] font-semibold">
-                                  <div className="w-3.5 h-3.5 border-2 border-[#5937E0] border-t-transparent rounded-full animate-spin"></div>
-                                  <span>Saving...</span>
-                                </div>
-                              ) : (
-                                <select
-                                  value={car.status || "available"}
-                                  onChange={(e) =>
-                                    car.id &&
-                                    handleStatusChange(
-                                      car.id,
-                                      e.target.value as any
-                                    )
-                                  }
-                                  className={`h-8 px-2.5 rounded-full text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
-                                    car.status === "available"
-                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                      : car.status === "rented"
-                                      ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                      : car.status === "maintenance"
-                                      ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
-                                      : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
-                                  }`}
-                                >
-                                  <option value="available">● Available</option>
-                                  <option value="rented">● Rented</option>
-                                  <option value="maintenance">
-                                    ● Maintenance
-                                  </option>
-                                  <option value="hidden">● Hidden</option>
-                                </select>
-                              )}
+                              <div className="flex flex-col gap-1.5 items-start">
+                                {car.id && rentedNowMap[car.id] && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#181524] text-white text-[11px] font-bold shadow-sm whitespace-nowrap">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    Rented now · until {formatDayMonth(rentedNowMap[car.id])}
+                                  </span>
+                                )}
+                                {actionLoadingId === car.id ? (
+                                  <div className="flex items-center gap-1.5 text-xs text-[#5937E0] font-semibold">
+                                    <div className="w-3.5 h-3.5 border-2 border-[#5937E0] border-t-transparent rounded-full animate-spin"></div>
+                                    <span>Saving...</span>
+                                  </div>
+                                ) : (
+                                  <select
+                                    value={car.status === "rented" ? "available" : car.status || "available"}
+                                    onChange={(e) =>
+                                      car.id &&
+                                      handleStatusChange(
+                                        car.id,
+                                        e.target.value as any
+                                      )
+                                    }
+                                    className={`h-8 px-2.5 rounded-full text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
+                                      car.status === "available" || car.status === "rented"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                        : car.status === "maintenance"
+                                        ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                                        : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                                    }`}
+                                  >
+                                    <option value="available">● Available</option>
+                                    <option value="maintenance">
+                                      ● Maintenance
+                                    </option>
+                                    <option value="hidden">● Hidden</option>
+                                  </select>
+                                )}
+                              </div>
                             </td>
 
                             {/* 5. Actions */}
                             <td className="py-4 px-6 text-right">
                               <div className="flex items-center justify-end gap-2">
+                                {/* Block Dates Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCarToBlock(car);
+                                    setIsBlockModalOpen(true);
+                                  }}
+                                  className="w-8 h-8 rounded-full bg-[#F8F8FB] hover:bg-purple-50 text-[#6C757D] hover:text-[#5937E0] flex items-center justify-center transition-colors cursor-pointer"
+                                  title="Block dates for walk-in / phone rental"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                </button>
+
                                 {/* Edit Button */}
                                 <button
                                   onClick={() => {
@@ -809,6 +852,18 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
             "Image migration completed successfully! All cars now use Supabase Storage."
           );
         }}
+      />
+
+      {/* Block Car Dates Modal (Walk-in / Phone rentals) */}
+      <BlockDatesModal
+        isOpen={isBlockModalOpen}
+        car={carToBlock}
+        onClose={() => {
+          setIsBlockModalOpen(false);
+          setCarToBlock(null);
+        }}
+        onBlockDates={blockCarDates}
+        onToast={showToast}
       />
     </div>
   );

@@ -672,12 +672,11 @@ export default function CarFormModal({
               <div>
                 <label className="block text-xs font-bold text-black mb-1">Status</label>
                 <select
-                  value={status}
+                  value={status === "rented" ? "available" : status}
                   onChange={(e) => setStatus(e.target.value as any)}
                   className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black font-bold focus:outline-none focus:border-[#5937E0]"
                 >
                   <option value="available">Available (Public)</option>
-                  <option value="rented">Rented (Visible, disabled)</option>
                   <option value="maintenance">Maintenance</option>
                   <option value="hidden">Hidden (Admin only)</option>
                 </select>

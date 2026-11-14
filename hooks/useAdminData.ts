@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { CarProps } from "@/types";
 import { supabase } from "@/lib/supabase";
+import { getCasablancaToday } from "@/lib/utils";
 
 export interface AdminBooking {
   id: string;
@@ -261,15 +262,34 @@ export function useAdminData(enabled: boolean = true) {
     };
   }, [bookings]);
 
+  // Active rentals today (Africa/Casablanca time) computed from confirmed bookings
+  const rentedNowMap: Record<string, string> = useMemo(() => {
+    const today = getCasablancaToday();
+    const map: Record<string, string> = {};
+    bookings.forEach((b) => {
+      if (
+        b.status === "confirmed" &&
+        b.pickup_date <= today &&
+        b.return_date >= today
+      ) {
+        if (!map[b.car_id] || b.return_date > map[b.car_id]) {
+          map[b.car_id] = b.return_date;
+        }
+      }
+    });
+    return map;
+  }, [bookings]);
+
   const carsStats: AdminCarsStats = useMemo(() => {
+    const rentedCount = cars.filter((c) => Boolean(c.id && rentedNowMap[c.id])).length;
     return {
       total: cars.length,
-      available: cars.filter((c) => c.status === "available").length,
-      rented: cars.filter((c) => c.status === "rented").length,
+      available: cars.filter((c) => c.status === "available" && (!c.id || !rentedNowMap[c.id])).length,
+      rented: rentedCount,
       maintenance: cars.filter((c) => c.status === "maintenance").length,
       hidden: cars.filter((c) => c.status === "hidden").length,
     };
-  }, [cars]);
+  }, [cars, rentedNowMap]);
 
   // 6. Optimistic Action: Update Booking Status with rollback
   const updateBookingStatus = async (
@@ -374,7 +394,13 @@ export function useAdminData(enabled: boolean = true) {
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking) return;
 
-    if (booking.status === "pending" || booking.status === "confirmed") {
+    const isManualBlock =
+      booking.customer_name === "Manual Block" ||
+      booking.reference_code?.startsWith("BLK-") ||
+      booking.customer_phone === "Walk-in / Phone";
+
+    // Active customer bookings must be cancelled/rejected first. Manual blocks can be removed directly.
+    if (!isManualBlock && (booking.status === "pending" || booking.status === "confirmed")) {
       throw new Error(
         `Cannot delete reservation ${booking.reference_code}: Active bookings (Pending or Confirmed) must be cancelled or rejected first.`
       );
@@ -406,9 +432,53 @@ export function useAdminData(enabled: boolean = true) {
     }
   };
 
+  const blockCarDates = async (
+    carId: string,
+    pickupDate: string,
+    returnDate: string,
+    notes?: string
+  ) => {
+    if (!pickupDate || !returnDate) {
+      throw new Error("Pickup date and return date are required.");
+    }
+    if (returnDate < pickupDate) {
+      throw new Error("Return date must be equal to or after pickup date.");
+    }
+
+    // Overlap rule against existing confirmed bookings for this car
+    const hasOverlap = bookings.some(
+      (b) =>
+        b.car_id === carId &&
+        b.status === "confirmed" &&
+        b.pickup_date <= returnDate &&
+        b.return_date >= pickupDate
+    );
+
+    if (hasOverlap) {
+      throw new Error(
+        `Cannot block dates: This vehicle already has a confirmed booking overlapping with ${pickupDate} to ${returnDate}.`
+      );
+    }
+
+    const { data, error } = await supabase.rpc("block_car_dates", {
+      p_car_id: carId,
+      p_pickup_date: pickupDate,
+      p_return_date: returnDate,
+      p_notes: notes?.trim() || null,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    await fetchData(true);
+    return data;
+  };
+
   return {
     cars,
     bookings,
+    rentedNowMap,
     loading,
     isRefreshing,
     lastUpdated,
@@ -421,5 +491,6 @@ export function useAdminData(enabled: boolean = true) {
     saveCar,
     deleteCar,
     deleteBooking,
+    blockCarDates,
   };
 }

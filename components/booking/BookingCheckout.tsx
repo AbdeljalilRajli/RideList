@@ -93,6 +93,65 @@ export default function BookingCheckout({
     }
   }, [user]);
 
+  // Unavailable confirmed date ranges for this vehicle
+  const [unavailableRanges, setUnavailableRanges] = useState<
+    { pickup_date: string; return_date: string }[]
+  >([]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadUnavailableRanges() {
+      let carId = car.id;
+      const isUuid =
+        carId &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          carId
+        );
+      if (!isUuid) {
+        const { data: dbCar } = await supabase
+          .from("cars")
+          .select("id")
+          .ilike("make", car.make)
+          .ilike("model", car.model)
+          .limit(1)
+          .maybeSingle();
+        if (dbCar?.id) carId = dbCar.id;
+      }
+
+      if (!carId) return;
+
+      try {
+        const { data, error } = await supabase.rpc("get_unavailable_ranges", {
+          p_car_id: carId,
+        });
+        if (!error && data && !isCancelled) {
+          setUnavailableRanges(data as { pickup_date: string; return_date: string }[]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch unavailable ranges:", err);
+      }
+    }
+    loadUnavailableRanges();
+    return () => {
+      isCancelled = true;
+    };
+  }, [car.id, car.make, car.model]);
+
+  // Check if chosen range overlaps an unavailable range
+  const isRangeOverlapping = useMemo(() => {
+    if (!pickupDate || !returnDate || unavailableRanges.length === 0) return false;
+    return unavailableRanges.some(
+      (r) => pickupDate <= r.return_date && returnDate >= r.pickup_date
+    );
+  }, [pickupDate, returnDate, unavailableRanges]);
+
+  const disabledRangesForPicker = useMemo(() => {
+    return unavailableRanges.map((r) => ({
+      startDate: r.pickup_date,
+      endDate: r.return_date,
+    }));
+  }, [unavailableRanges]);
+
   // Created Booking state for Step 3
   const [createdBooking, setCreatedBooking] = useState<{
     referenceCode: string;
@@ -169,6 +228,11 @@ export default function BookingCheckout({
 
     if (returnDate < pickupDate) {
       setErrorMessage("Return date must be equal to or after pickup date.");
+      return;
+    }
+
+    if (isRangeOverlapping) {
+      setErrorMessage("This car is not available for these dates");
       return;
     }
 
@@ -367,12 +431,23 @@ export default function BookingCheckout({
                         setPickupDate(startDate);
                         setReturnDate(endDate);
                       }}
+                      disabledRanges={disabledRangesForPicker}
                       layout="split"
                       showLabels={true}
                       pickupLabel="Pickup Date"
                       returnLabel="Return Date"
                       buttonClassName="!bg-white !rounded-xl"
                     />
+
+                    {/* Overlap Error Banner */}
+                    {isRangeOverlapping && (
+                      <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+                        <svg className="w-4 h-4 shrink-0 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <span>This car is not available for these dates</span>
+                      </div>
+                    )}
 
                     {/* Pickup & Return Time Pickers */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -619,7 +694,12 @@ export default function BookingCheckout({
                   {/* Submit / Next Button */}
                   <button
                     type="submit"
-                    className="w-full h-12 rounded-full bg-[#5937E0] hover:bg-[#4A2CC7] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                    disabled={isRangeOverlapping}
+                    className={`w-full h-12 rounded-full text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${
+                      isRangeOverlapping
+                        ? "bg-[#D1D5DB] text-[#6C757D] cursor-not-allowed opacity-75 shadow-none"
+                        : "bg-[#5937E0] hover:bg-[#4A2CC7] text-white hover:shadow-lg cursor-pointer"
+                    }`}
                   >
                     <span>Continue to Customer Details</span>
                     <span>→</span>

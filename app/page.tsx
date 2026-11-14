@@ -65,19 +65,32 @@ export default function Home() {
 
   // Top 6 cars for the 2x3 grid (defaults to constants, hydrated from Supabase)
   const [displayCars, setDisplayCars] = useState<CarProps[]>(cars.slice(0, 6));
+  const [rentedTodayMap, setRentedTodayMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function loadFeaturedCars() {
       try {
-        const { data, error } = await supabase
-          .from("cars")
-          .select("*")
-          .neq("status", "hidden")
-          .order("created_at", { ascending: false })
-          .limit(6);
+        const [carsRes, rentedRes] = await Promise.all([
+          supabase
+            .from("cars")
+            .select("*")
+            .neq("status", "hidden")
+            .order("created_at", { ascending: false })
+            .limit(6),
+          supabase.rpc("get_cars_rented_today"),
+        ]);
 
-        if (!error && data && data.length > 0) {
-          setDisplayCars(data as CarProps[]);
+        if (!carsRes.error && carsRes.data && carsRes.data.length > 0) {
+          setDisplayCars(carsRes.data as CarProps[]);
+        }
+        if (!rentedRes.error && rentedRes.data) {
+          const map: Record<string, string> = {};
+          (rentedRes.data as { car_id: string; return_date: string }[]).forEach(
+            (row) => {
+              map[row.car_id] = row.return_date;
+            }
+          );
+          setRentedTodayMap(map);
         }
       } catch (err) {
         console.error("Error loading featured cars from Supabase:", err);
@@ -470,7 +483,11 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {displayCars.map((car, idx) => (
             <Reveal key={`${car.make}-${car.model}-${idx}`} delay={idx * 80}>
-              <CarCard car={car} index={idx} />
+              <CarCard
+                car={car}
+                index={idx}
+                rentedUntilDate={car.id ? rentedTodayMap[car.id] : undefined}
+              />
             </Reveal>
           ))}
         </div>

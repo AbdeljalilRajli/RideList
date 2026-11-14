@@ -18,6 +18,7 @@ export interface DateRangePickerProps {
   className?: string;
   buttonClassName?: string;
   disabled?: boolean;
+  disabledRanges?: { startDate: string; endDate: string }[];
 }
 
 /**
@@ -77,6 +78,7 @@ export default function DateRangePicker({
   className = "",
   buttonClassName = "",
   disabled = false,
+  disabledRanges = [],
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeStep, setActiveStep] = useState<"pickup" | "return">("pickup");
@@ -109,6 +111,30 @@ export default function DateRangePicker({
     d.setHours(0, 0, 0, 0);
     return d;
   }, [minDate]);
+
+  // Convert disabledRanges into DayPicker matchers
+  const disabledMatchers = React.useMemo(() => {
+    const matchers: any[] = [{ before: today }];
+    if (disabledRanges && disabledRanges.length > 0) {
+      disabledRanges.forEach((range) => {
+        const from = parseISODateString(range.startDate);
+        const to = parseISODateString(range.endDate);
+        if (from && to) {
+          from.setHours(0, 0, 0, 0);
+          to.setHours(0, 0, 0, 0);
+          matchers.push({ from, to });
+        }
+      });
+    }
+    return matchers;
+  }, [today, disabledRanges]);
+
+  const isDayDisabled = (d: Date) => {
+    if (d < today) return true;
+    if (!disabledRanges || disabledRanges.length === 0) return false;
+    const iso = toISODateString(d);
+    return disabledRanges.some((r) => iso >= r.startDate && iso <= r.endDate);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -220,7 +246,7 @@ export default function DateRangePicker({
   // Day click handler with auto step-transition and min 1-day rental enforcement
   const handleDayClick = (day: Date) => {
     day.setHours(0, 0, 0, 0);
-    if (day < today) return; // Past dates disabled
+    if (day < today || isDayDisabled(day)) return; // Past or unavailable dates disabled
 
     if (activeStep === "pickup") {
       // Step 1: User chose pick-up date
@@ -465,7 +491,7 @@ export default function DateRangePicker({
             mode="range"
             selected={selectedRange}
             onDayClick={handleDayClick}
-            disabled={{ before: today }}
+            disabled={disabledMatchers}
             weekStartsOn={1}
             numberOfMonths={isMobile ? 1 : 2}
             defaultMonth={tempFrom || today}

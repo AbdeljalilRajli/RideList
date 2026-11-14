@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cars } from "@/constants";
 import { CarProps } from "@/types";
-import { getCarImage } from "@/lib/utils";
+import { getCarImage, getCasablancaToday, formatDayMonth } from "@/lib/utils";
 import { normalizeFuel, normalizeTransmission, formatBodyType, formatSegment } from "@/lib/carTaxonomy";
+import { supabase } from "@/lib/supabase";
 import BookingForm from "@/components/BookingForm";
 import CarCard from "@/components/CarCard";
 
@@ -14,6 +15,56 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
   const [copiedShare, setCopiedShare] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [activeThumb, setActiveThumb] = useState(0);
+
+  // Load unavailable confirmed date ranges for this car
+  const [unavailableRanges, setUnavailableRanges] = useState<
+    { pickup_date: string; return_date: string }[]
+  >([]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadRanges() {
+      let carId = car.id;
+      const isUuid =
+        carId &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          carId
+        );
+      if (!isUuid) {
+        const { data: dbCar } = await supabase
+          .from("cars")
+          .select("id")
+          .ilike("make", car.make)
+          .ilike("model", car.model)
+          .limit(1)
+          .maybeSingle();
+        if (dbCar?.id) carId = dbCar.id;
+      }
+      if (!carId) return;
+
+      try {
+        const { data, error } = await supabase.rpc("get_unavailable_ranges", {
+          p_car_id: carId,
+        });
+        if (!error && data && !isCancelled) {
+          setUnavailableRanges(data);
+        }
+      } catch (err) {
+        console.error("Failed to load car unavailable ranges:", err);
+      }
+    }
+    loadRanges();
+    return () => {
+      isCancelled = true;
+    };
+  }, [car.id, car.make, car.model]);
+
+  const casablancaToday = getCasablancaToday();
+  const activeBookingToday = unavailableRanges.find(
+    (r) => r.pickup_date <= casablancaToday && r.return_date >= casablancaToday
+  );
+  const rentedUntil = activeBookingToday?.return_date;
+  const isMaintenance = car.status === "maintenance";
 
   const relatedCars: CarProps[] = useMemo(() => {
     if (!car) return [];
@@ -28,7 +79,6 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
     }
   };
 
-  const isRented = car.status === "rented";
   const mainCarImage = getCarImage(car);
   const galleryImages =
     car.images && car.images.length > 0
@@ -55,9 +105,13 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
           </nav>
 
           <div className="flex items-center gap-3">
-            {isRented ? (
-              <div className="px-3.5 py-1.5 rounded-full bg-[#181524] text-white text-xs font-bold uppercase tracking-wider">
-                Currently Rented
+            {isMaintenance ? (
+              <div className="px-3.5 py-1.5 rounded-full bg-orange-100 text-orange-800 text-xs font-bold uppercase tracking-wider">
+                Unavailable
+              </div>
+            ) : rentedUntil ? (
+              <div className="px-3.5 py-1.5 rounded-full bg-[#181524] text-white text-xs font-bold">
+                Back on {formatDayMonth(rentedUntil)}
               </div>
             ) : (
               <div className="px-3.5 py-1.5 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
@@ -207,14 +261,14 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
                 </div>
               </div>
 
-              {/* Main CTA: Rent a car or Rented state */}
-              {isRented ? (
+              {/* Main CTA: Rent a car or Unavailable state */}
+              {isMaintenance ? (
                 <div className="mb-8 p-4 rounded-2xl bg-[#F1F1F6] border border-[#E5E7EB] text-center">
                   <span className="block text-sm font-bold text-black mb-1">
-                    Currently Rented
+                    Currently Unavailable
                   </span>
                   <p className="text-xs text-[#6C757D] mb-3">
-                    This vehicle is currently on the road and unavailable for reservation.
+                    This vehicle is currently undergoing maintenance and unavailable for booking.
                   </p>
                   <Link
                     href="/fleet"
@@ -224,15 +278,22 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
                   </Link>
                 </div>
               ) : (
-                <button
-                  onClick={() => setIsBookingModalOpen(true)}
-                  className="w-full h-14 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] text-white font-bold text-base shadow-[0_8px_24px_rgba(89,55,224,0.3)] transition-all flex items-center justify-center gap-2 mb-8 cursor-pointer hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
-                >
-                  <span>Rent a car</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
+                <div className="mb-8 space-y-2">
+                  <button
+                    onClick={() => setIsBookingModalOpen(true)}
+                    className="w-full h-14 rounded-[50px] bg-[#5937E0] hover:bg-[#4A2CC7] text-white font-bold text-base shadow-[0_8px_24px_rgba(89,55,224,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
+                  >
+                    <span>Rent a car</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </button>
+                  {rentedUntil && (
+                    <p className="text-center text-xs text-[#6C757D]">
+                      Currently on the road · Returns on <strong>{formatDayMonth(rentedUntil)}</strong> (bookable for other dates)
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* Car Equipment & Features Checklist */}

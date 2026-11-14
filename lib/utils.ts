@@ -48,3 +48,32 @@ export function getCarSlug(car: { make?: string; model?: string; id?: string }):
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+/**
+ * Returns today's ISO date string ("YYYY-MM-DD") in Africa/Casablanca timezone.
+ */
+export function getCasablancaToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Casablanca",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/**
+ * Formats an ISO date string "YYYY-MM-DD" into a friendly "DD Mon" string (e.g. "30 Nov").
+ */
+export function formatDayMonth(isoDateStr?: string | null): string {
+  if (!isoDateStr) return "";
+  const parts = isoDateStr.split("-");
+  if (parts.length !== 3) return "";
+  const day = parseInt(parts[2], 10);
+  const month = parseInt(parts[1], 10);
+  if (isNaN(day) || isNaN(month)) return "";
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  return `${day} ${months[month - 1]}`;
+}

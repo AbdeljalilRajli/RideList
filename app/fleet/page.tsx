@@ -120,7 +120,31 @@ function FleetContent() {
   const [returnDate, setReturnDate] = useState(() => searchParams.get("return_date") || "");
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(() => searchParams.get("only_available") === "true");
   const [availabilityMap, setAvailabilityMap] = useState<Record<string, boolean>>({});
+  const [rentedTodayMap, setRentedTodayMap] = useState<Record<string, string>>({});
   const [isCheckingDates, setIsCheckingDates] = useState(false);
+
+  // Load cars currently rented today (Africa/Casablanca time)
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchRentedToday() {
+      try {
+        const { data, error } = await supabase.rpc("get_cars_rented_today");
+        if (!error && data && !isCancelled) {
+          const map: Record<string, string> = {};
+          (data as { car_id: string; return_date: string }[]).forEach((row) => {
+            map[row.car_id] = row.return_date;
+          });
+          setRentedTodayMap(map);
+        }
+      } catch (err) {
+        console.error("Error loading rented today cars:", err);
+      }
+    }
+    fetchRentedToday();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(() => {
@@ -1105,6 +1129,7 @@ function FleetContent() {
                       ? availabilityMap[car.id] ?? true
                       : undefined
                   }
+                  rentedUntilDate={car.id ? rentedTodayMap[car.id] : undefined}
                 />
               ))}
             </div>

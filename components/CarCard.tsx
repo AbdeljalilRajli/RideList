@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CarProps } from "@/types";
-import { getCarImage, getCarSlug } from "@/lib/utils";
+import { getCarImage, getCarSlug, formatDayMonth } from "@/lib/utils";
 import {
   normalizeFuel,
   normalizeTransmission,
@@ -15,9 +15,10 @@ interface CarCardProps {
   car: CarProps;
   index?: number;
   isAvailableForDates?: boolean;
+  rentedUntilDate?: string | null;
 }
 
-const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
+const CarCard = ({ car, index = 0, isAvailableForDates, rentedUntilDate }: CarCardProps) => {
   const {
     id,
     year,
@@ -36,8 +37,8 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
 
   const carSlug = getCarSlug(car);
   const carImage = getCarImage(car);
-  const isRented = status === "rented";
-  const isUnavailableForDates = isAvailableForDates === false && !isRented;
+  const isMaintenance = status === "maintenance";
+  const isUnavailableForDates = isAvailableForDates === false;
 
   const subtitle = body_type
     ? `${formatBodyType(body_type)}${segment ? ` • ${formatSegment(segment)}` : ""}`
@@ -45,15 +46,24 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
 
   return (
     <article className="relative flex flex-col bg-white rounded-[16px] border border-[#E5E7EB] shadow-[0_2px_10px_rgba(0,0,0,0.03)] [@media(hover:hover)]:hover:shadow-[0_12px_28px_rgba(89,55,224,0.14)] [@media(hover:hover)]:hover:-translate-y-1 transition-all duration-200 ease-out overflow-hidden group p-6 justify-between motion-reduce:transition-none motion-reduce:hover:transform-none">
-      {/* Rented or Date-Unavailable Badge */}
-      {isRented && (
-        <span className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-[#181524]/90 backdrop-blur-sm text-white text-[11px] font-bold tracking-wider uppercase shadow-md select-none">
-          Rented
+      {/* Maintenance Badge */}
+      {isMaintenance && (
+        <span className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-orange-600/90 backdrop-blur-sm text-white text-[11px] font-bold tracking-wider uppercase shadow-md select-none">
+          Unavailable
         </span>
       )}
-      {isUnavailableForDates && (
+
+      {/* Date-Unavailable Badge on Fleet page with dates selected */}
+      {!isMaintenance && isUnavailableForDates && (
         <span className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-amber-600/95 backdrop-blur-sm text-white text-[10px] font-bold tracking-wider uppercase shadow-md select-none">
-          Unavailable for Dates
+          Unavailable for these dates
+        </span>
+      )}
+
+      {/* Rented Today Badge: "Back on DD Mon" */}
+      {!isMaintenance && rentedUntilDate && (
+        <span className="absolute top-4 left-4 z-10 px-3 py-1 rounded-full bg-[#181524]/90 backdrop-blur-sm text-white text-[11px] font-bold tracking-wider shadow-md select-none">
+          Back on {formatDayMonth(rentedUntilDate)}
         </span>
       )}
 
@@ -71,8 +81,8 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           priority={index < 3}
           className={`object-contain p-2 transition-transform duration-500 motion-reduce:transition-none motion-reduce:transform-none ${
-            isRented || isUnavailableForDates
-              ? "opacity-75 grayscale-[20%]"
+            isMaintenance
+              ? "opacity-60 grayscale-[40%]"
               : "[@media(hover:hover)]:group-hover:scale-105"
           }`}
         />
@@ -184,21 +194,13 @@ const CarCard = ({ car, index = 0, isAvailableForDates }: CarCardProps) => {
       </div>
 
       {/* Bottom Button */}
-      {isRented ? (
+      {isMaintenance ? (
         <button
           type="button"
           disabled
           className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-sm font-semibold flex items-center justify-center cursor-not-allowed border border-[#E5E7EB]"
         >
-          Currently Rented
-        </button>
-      ) : isUnavailableForDates ? (
-        <button
-          type="button"
-          disabled
-          className="w-full h-11 rounded-[50px] bg-[#F1F1F6] text-[#9CA3AF] text-xs font-semibold flex items-center justify-center cursor-not-allowed border border-[#E5E7EB]"
-        >
-          Unavailable for Selected Dates
+          Unavailable
         </button>
       ) : (
         <Link

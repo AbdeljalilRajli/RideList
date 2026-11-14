@@ -370,26 +370,42 @@ export default function BookingTable({
 
                       {/* 3. Customer & WhatsApp */}
                       <td className="py-4 px-6">
-                        <span className="font-bold text-black text-xs block">
-                          {b.customer_name}
-                        </span>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <a
-                            href={`https://wa.me/${phoneClean}?text=${encodeURIComponent(
-                              `Bonjour ${b.customer_name}! Nous vous contactons depuis l'agence RideList concernant votre réservation ${b.reference_code} pour la ${b.cars?.make} ${b.cars?.model}.`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#25D366] hover:underline"
-                            title="Chat on WhatsApp"
-                          >
-                            <span>💬 {b.customer_phone}</span>
-                          </a>
-                        </div>
-                        {b.customer_email && (
-                          <span className="text-[11px] text-[#6C757D] block truncate max-w-[160px]">
-                            {b.customer_email}
-                          </span>
+                        {b.customer_name === "Manual Block" || b.reference_code?.startsWith("BLK-") ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-100 text-[#5937E0] text-[10px] font-bold uppercase tracking-wider mb-0.5">
+                              Manual Block
+                            </span>
+                            <span className="font-bold text-black text-xs block">
+                              {b.notes || "Walk-in / Phone Rental"}
+                            </span>
+                            <span className="text-[11px] text-[#6C757D]">
+                              {b.customer_phone || "Agency Walk-in"}
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="font-bold text-black text-xs block">
+                              {b.customer_name}
+                            </span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <a
+                                href={`https://wa.me/${phoneClean}?text=${encodeURIComponent(
+                                  `Bonjour ${b.customer_name}! Nous vous contactons depuis l'agence RideList concernant votre réservation ${b.reference_code} pour la ${b.cars?.make} ${b.cars?.model}.`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#25D366] hover:underline"
+                                title="Chat on WhatsApp"
+                              >
+                                <span>💬 {b.customer_phone}</span>
+                              </a>
+                            </div>
+                            {b.customer_email && (
+                              <span className="text-[11px] text-[#6C757D] block truncate max-w-[160px]">
+                                {b.customer_email}
+                              </span>
+                            )}
+                          </>
                         )}
                       </td>
 
@@ -490,24 +506,34 @@ export default function BookingTable({
                               )}
 
                               {b.status === "confirmed" && (
-                                <>
+                                b.customer_name === "Manual Block" ||
+                                b.reference_code?.startsWith("BLK-") ? (
                                   <button
-                                    onClick={() =>
-                                      handleAction(b, "completed")
-                                    }
-                                    className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-2xs cursor-pointer"
+                                    onClick={() => setBookingToDelete(b)}
+                                    className="px-2.5 py-1 rounded-md bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold border border-red-200 cursor-pointer"
                                   >
-                                    Complete
+                                    Remove Block
                                   </button>
-                                  <button
-                                    onClick={() =>
-                                      handleAction(b, "cancelled")
-                                    }
-                                    className="px-2.5 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() =>
+                                        handleAction(b, "completed")
+                                      }
+                                      className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-2xs cursor-pointer"
+                                    >
+                                      Complete
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleAction(b, "cancelled")
+                                      }
+                                      className="px-2.5 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </>
+                                )
                               )}
 
                               <button
@@ -651,8 +677,10 @@ export default function BookingTable({
             </div>
 
             <div className="pt-3 border-t border-[#E5E7EB] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              {/* Delete button (only allowed for completed, cancelled, rejected) */}
-              {selectedBooking.status === "completed" ||
+              {/* Delete / Remove button */}
+              {selectedBooking.customer_name === "Manual Block" ||
+              selectedBooking.reference_code?.startsWith("BLK-") ||
+              selectedBooking.status === "completed" ||
               selectedBooking.status === "cancelled" ||
               selectedBooking.status === "rejected" ? (
                 <button
@@ -673,7 +701,12 @@ export default function BookingTable({
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                     />
                   </svg>
-                  <span>Delete permanently</span>
+                  <span>
+                    {selectedBooking.customer_name === "Manual Block" ||
+                    selectedBooking.reference_code?.startsWith("BLK-")
+                      ? "Remove block"
+                      : "Delete permanently"}
+                  </span>
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
@@ -740,10 +773,16 @@ export default function BookingTable({
 
             <div className="text-center">
               <h3 className="text-xl font-bold text-black font-['Work_Sans',sans-serif] mb-1">
-                Delete Reservation Permanently?
+                {bookingToDelete.customer_name === "Manual Block" ||
+                bookingToDelete.reference_code?.startsWith("BLK-")
+                  ? "Remove Manual Block?"
+                  : "Delete Reservation Permanently?"}
               </h3>
               <p className="text-xs text-[#6C757D] leading-relaxed">
-                This action cannot be undone. The booking record will be permanently deleted from the database.
+                {bookingToDelete.customer_name === "Manual Block" ||
+                bookingToDelete.reference_code?.startsWith("BLK-")
+                  ? "This will remove the date block and make the vehicle available for booking again."
+                  : "This action cannot be undone. The booking record will be permanently deleted from the database."}
               </p>
             </div>
 
@@ -796,10 +835,10 @@ export default function BookingTable({
                 {isDeleting ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Deleting...</span>
+                    <span>{bookingToDelete.customer_name === "Manual Block" || bookingToDelete.reference_code?.startsWith("BLK-") ? "Removing..." : "Deleting..."}</span>
                   </>
                 ) : (
-                  <span>Delete Permanently</span>
+                  <span>{bookingToDelete.customer_name === "Manual Block" || bookingToDelete.reference_code?.startsWith("BLK-") ? "Remove Block" : "Delete Permanently"}</span>
                 )}
               </button>
             </div>
