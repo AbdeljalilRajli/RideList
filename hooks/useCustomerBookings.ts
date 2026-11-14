@@ -236,11 +236,9 @@ export function useCustomerBookings(user: User | null) {
     );
 
     try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled" })
-        .eq("id", bookingId)
-        .eq("status", "pending");
+      const { error } = await supabase.rpc("cancel_my_booking", {
+        booking_id: bookingId,
+      });
 
       if (error) {
         throw new Error(error.message);
