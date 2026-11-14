@@ -77,3 +77,19 @@ export function formatDayMonth(isoDateStr?: string | null): string {
   ];
   return `${day} ${months[month - 1]}`;
 }
+
+/**
+ * Checks if a booking is an administrative manual block (walk-in or phone rental).
+ */
+export function isManualBlock(b?: {
+  customer_name?: string | null;
+  reference_code?: string | null;
+  customer_phone?: string | null;
+} | null): boolean {
+  if (!b) return false;
+  return (
+    b.customer_name === "Manual Block" ||
+    Boolean(b.reference_code?.startsWith("BLK-")) ||
+    b.customer_phone === "Walk-in / Phone"
+  );
+}

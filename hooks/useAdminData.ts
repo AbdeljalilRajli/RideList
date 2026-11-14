@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { CarProps } from "@/types";
 import { supabase } from "@/lib/supabase";
-import { getCasablancaToday } from "@/lib/utils";
+import { getCasablancaToday, isManualBlock } from "@/lib/utils";
 
 export interface AdminBooking {
   id: string;
@@ -44,6 +44,7 @@ export interface AdminBookingsStats {
   completed: number;
   cancelled: number;
   rejected: number;
+  blocks: number;
 }
 
 export interface AdminCarsStats {
@@ -251,14 +252,18 @@ export function useAdminData(enabled: boolean = true) {
   }, [enabled, fetchData]);
 
   // 5. Unfiltered Stats Calculation (always from full unfiltered arrays)
+  // Manual blocks must not count in the reservation stats (total, pending, confirmed, completed)
   const bookingsStats: AdminBookingsStats = useMemo(() => {
+    const reservations = bookings.filter((b) => !isManualBlock(b));
+    const blocksCount = bookings.filter((b) => isManualBlock(b)).length;
     return {
-      total: bookings.length,
-      pending: bookings.filter((b) => b.status === "pending").length,
-      confirmed: bookings.filter((b) => b.status === "confirmed").length,
-      completed: bookings.filter((b) => b.status === "completed").length,
-      cancelled: bookings.filter((b) => b.status === "cancelled").length,
-      rejected: bookings.filter((b) => b.status === "rejected").length,
+      total: reservations.length,
+      pending: reservations.filter((b) => b.status === "pending").length,
+      confirmed: reservations.filter((b) => b.status === "confirmed").length,
+      completed: reservations.filter((b) => b.status === "completed").length,
+      cancelled: reservations.filter((b) => b.status === "cancelled").length,
+      rejected: reservations.filter((b) => b.status === "rejected").length,
+      blocks: blocksCount,
     };
   }, [bookings]);
 
@@ -436,7 +441,8 @@ export function useAdminData(enabled: boolean = true) {
     carId: string,
     pickupDate: string,
     returnDate: string,
-    notes?: string
+    notes?: string,
+    amount?: number
   ) => {
     if (!pickupDate || !returnDate) {
       throw new Error("Pickup date and return date are required.");
@@ -469,6 +475,20 @@ export function useAdminData(enabled: boolean = true) {
 
     if (error) {
       throw new Error(error.message);
+    }
+
+    // If an optional amount received was entered, update total_price on the created booking record
+    const createdBookingId =
+      (Array.isArray(data) && data[0]?.booking_id) || (data as any)?.booking_id;
+    if (createdBookingId && amount !== undefined && amount > 0) {
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({ total_price: amount })
+        .eq("id", createdBookingId);
+
+      if (updateError) {
+        console.error("Failed to update amount received for block:", updateError);
+      }
     }
 
     await fetchData(true);

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { AdminBooking } from "@/hooks/useAdminData";
 import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
+import { isManualBlock } from "@/lib/utils";
 
 interface BookingTableProps {
   bookings: AdminBooking[];
@@ -44,7 +45,7 @@ export default function BookingTable({
 }: BookingTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "pending" | "confirmed" | "completed" | "cancelled" | "rejected"
+    "all" | "pending" | "confirmed" | "completed" | "cancelled" | "rejected" | "blocks"
   >("all");
 
   // Selected booking for full details modal
@@ -76,17 +77,29 @@ export default function BookingTable({
   };
 
   // Unfiltered stats: always computed from the complete unfiltered bookings list
+  // Manual blocks must not count in the reservation stats (Total Reservations, Pending, Confirmed & Active, Completed)
   const stats = useMemo(() => {
-    const total = bookings.length;
-    const pending = bookings.filter((b) => b.status === "pending").length;
-    const confirmed = bookings.filter((b) => b.status === "confirmed").length;
-    const completed = bookings.filter((b) => b.status === "completed").length;
-    const cancelled = bookings.filter((b) => b.status === "cancelled").length;
-    const rejected = bookings.filter((b) => b.status === "rejected").length;
-    return { total, pending, confirmed, completed, cancelled, rejected };
+    const reservations = bookings.filter((b) => !isManualBlock(b));
+    const blocksCount = bookings.filter((b) => isManualBlock(b)).length;
+    const total = reservations.length;
+    const pending = reservations.filter((b) => b.status === "pending").length;
+    const confirmed = reservations.filter((b) => b.status === "confirmed").length;
+    const completed = reservations.filter((b) => b.status === "completed").length;
+    const cancelled = reservations.filter((b) => b.status === "cancelled").length;
+    const rejected = reservations.filter((b) => b.status === "rejected").length;
+    return {
+      total,
+      pending,
+      confirmed,
+      completed,
+      cancelled,
+      rejected,
+      blocks: blocksCount,
+    };
   }, [bookings]);
 
   // In-memory instant filtering
+  // Blocks appear only under All and Blocks, not under Confirmed
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       const q = searchQuery.toLowerCase().trim();
@@ -97,10 +110,21 @@ export default function BookingTable({
         b.customer_phone.includes(q) ||
         `${b.cars?.make || ""} ${b.cars?.model || ""}`
           .toLowerCase()
-          .includes(q);
+          .includes(q) ||
+        Boolean(b.notes && b.notes.toLowerCase().includes(q));
 
-      const matchesStatus =
-        statusFilter === "all" ? true : b.status === statusFilter;
+      const isBlock = isManualBlock(b);
+
+      let matchesStatus = false;
+      if (statusFilter === "all") {
+        matchesStatus = true;
+      } else if (statusFilter === "blocks") {
+        matchesStatus = isBlock;
+      } else if (statusFilter === "confirmed") {
+        matchesStatus = b.status === "confirmed" && !isBlock;
+      } else {
+        matchesStatus = b.status === statusFilter && !isBlock;
+      }
 
       return matchesSearch && matchesStatus;
     });
@@ -131,9 +155,10 @@ export default function BookingTable({
   };
 
   const tabs = [
-    { key: "all", label: `All (${stats.total})` },
+    { key: "all", label: `All (${bookings.length})` },
     { key: "pending", label: `Pending (${stats.pending})` },
     { key: "confirmed", label: `Confirmed (${stats.confirmed})` },
+    { key: "blocks", label: `Blocks (${stats.blocks})` },
     { key: "completed", label: `Completed (${stats.completed})` },
     { key: "cancelled", label: `Cancelled (${stats.cancelled})` },
     { key: "rejected", label: `Rejected (${stats.rejected})` },
@@ -255,7 +280,7 @@ export default function BookingTable({
           <div className="flex flex-wrap items-center gap-2">
             {loading ? (
               <>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
+                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
                   <div
                     key={i}
                     className="h-8 w-20 bg-gray-100 rounded-full animate-pulse"
@@ -370,7 +395,7 @@ export default function BookingTable({
 
                       {/* 3. Customer & WhatsApp */}
                       <td className="py-4 px-6">
-                        {b.customer_name === "Manual Block" || b.reference_code?.startsWith("BLK-") ? (
+                        {isManualBlock(b) ? (
                           <div>
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-100 text-[#5937E0] text-[10px] font-bold uppercase tracking-wider mb-0.5">
                               Manual Block
@@ -432,17 +457,27 @@ export default function BookingTable({
 
                       {/* 5. Pricing */}
                       <td className="py-4 px-6">
-                        <span className="font-extrabold text-[#5937E0] text-sm block">
-                          {b.total_price} DH
-                        </span>
-                        <span className="text-[11px] text-[#6C757D] block">
-                          Caution: {b.deposit_amount} DH
-                        </span>
-                        {b.extras && b.extras.length > 0 && (
-                          <span className="text-[10px] text-emerald-600 font-semibold block">
-                            +{b.extras.length}{" "}
-                            {b.extras.length === 1 ? "extra" : "extras"}
+                        {isManualBlock(b) ? (
+                          <span className="font-extrabold text-[#5937E0] text-sm block">
+                            {b.total_price && b.total_price > 0
+                              ? `${b.total_price} DH`
+                              : "—"}
                           </span>
+                        ) : (
+                          <>
+                            <span className="font-extrabold text-[#5937E0] text-sm block">
+                              {b.total_price} DH
+                            </span>
+                            <span className="text-[11px] text-[#6C757D] block">
+                              Caution: {b.deposit_amount} DH
+                            </span>
+                            {b.extras && b.extras.length > 0 && (
+                              <span className="text-[10px] text-emerald-600 font-semibold block">
+                                +{b.extras.length}{" "}
+                                {b.extras.length === 1 ? "extra" : "extras"}
+                              </span>
+                            )}
+                          </>
                         )}
                       </td>
 
@@ -451,30 +486,38 @@ export default function BookingTable({
                         <div className="space-y-2">
                           {/* Current Status Pill */}
                           <div>
-                            {b.status === "pending" && (
-                              <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200">
-                                ● Pending
+                            {isManualBlock(b) ? (
+                              <span className="inline-block px-2.5 py-0.5 rounded-full bg-purple-50 text-[#5937E0] text-[11px] font-bold border border-purple-200">
+                                ● Blocked
                               </span>
-                            )}
-                            {b.status === "confirmed" && (
-                              <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
-                                ● Confirmed
-                              </span>
-                            )}
-                            {b.status === "completed" && (
-                              <span className="inline-block px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[11px] font-bold border border-blue-200">
-                                ● Completed
-                              </span>
-                            )}
-                            {b.status === "cancelled" && (
-                              <span className="inline-block px-2.5 py-0.5 rounded-full bg-red-50 text-red-800 text-[11px] font-bold border border-red-200">
-                                ● Cancelled
-                              </span>
-                            )}
-                            {b.status === "rejected" && (
-                              <span className="inline-block px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800 text-[11px] font-bold border border-gray-300">
-                                ● Rejected
-                              </span>
+                            ) : (
+                              <>
+                                {b.status === "pending" && (
+                                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200">
+                                    ● Pending
+                                  </span>
+                                )}
+                                {b.status === "confirmed" && (
+                                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                                    ● Confirmed
+                                  </span>
+                                )}
+                                {b.status === "completed" && (
+                                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[11px] font-bold border border-blue-200">
+                                    ● Completed
+                                  </span>
+                                )}
+                                {b.status === "cancelled" && (
+                                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-red-50 text-red-800 text-[11px] font-bold border border-red-200">
+                                    ● Cancelled
+                                  </span>
+                                )}
+                                {b.status === "rejected" && (
+                                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800 text-[11px] font-bold border border-gray-300">
+                                    ● Rejected
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
 
@@ -486,7 +529,7 @@ export default function BookingTable({
                             </div>
                           ) : (
                             <div className="flex flex-wrap items-center gap-1.5">
-                              {b.status === "pending" && (
+                              {b.status === "pending" && !isManualBlock(b) && (
                                 <>
                                   <button
                                     onClick={() =>
@@ -506,8 +549,7 @@ export default function BookingTable({
                               )}
 
                               {b.status === "confirmed" && (
-                                b.customer_name === "Manual Block" ||
-                                b.reference_code?.startsWith("BLK-") ? (
+                                isManualBlock(b) ? (
                                   <button
                                     onClick={() => setBookingToDelete(b)}
                                     className="px-2.5 py-1 rounded-md bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold border border-red-200 cursor-pointer"
@@ -637,28 +679,40 @@ export default function BookingTable({
 
               <div className="p-3.5 rounded-xl bg-[#F8F8FB] space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-[#6C757D]">Total Amount:</span>
-                  <strong className="text-base font-extrabold text-[#5937E0]">
-                    {selectedBooking.total_price} DH
-                  </strong>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-[#6C757D]">
-                    Security Deposit (Caution):
+                    {isManualBlock(selectedBooking)
+                      ? "Amount Received:"
+                      : "Total Amount:"}
                   </span>
-                  <strong className="text-black">
-                    {selectedBooking.deposit_amount} DH
+                  <strong className="text-base font-extrabold text-[#5937E0]">
+                    {isManualBlock(selectedBooking)
+                      ? selectedBooking.total_price && selectedBooking.total_price > 0
+                        ? `${selectedBooking.total_price} DH`
+                        : "—"
+                      : `${selectedBooking.total_price} DH`}
                   </strong>
                 </div>
-                {selectedBooking.delivery_fee > 0 && (
+                {!isManualBlock(selectedBooking) && (
                   <div className="flex justify-between">
-                    <span className="text-[#6C757D]">Delivery Fee:</span>
+                    <span className="text-[#6C757D]">
+                      Security Deposit (Caution):
+                    </span>
                     <strong className="text-black">
-                      +{selectedBooking.delivery_fee} DH
+                      {selectedBooking.deposit_amount} DH
                     </strong>
                   </div>
                 )}
-                {selectedBooking.extras &&
+                {!isManualBlock(selectedBooking) &&
+                  selectedBooking.delivery_fee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-[#6C757D]">Delivery Fee:</span>
+                      <strong className="text-black">
+                        +{selectedBooking.delivery_fee} DH
+                      </strong>
+                    </div>
+                  )}
+                {!isManualBlock(selectedBooking) &&
+                  selectedBooking.extras &&
                   selectedBooking.extras.length > 0 && (
                     <div className="pt-2 border-t border-[#E5E7EB]">
                       <span className="text-[#6C757D] block mb-1">
@@ -678,8 +732,7 @@ export default function BookingTable({
 
             <div className="pt-3 border-t border-[#E5E7EB] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               {/* Delete / Remove button */}
-              {selectedBooking.customer_name === "Manual Block" ||
-              selectedBooking.reference_code?.startsWith("BLK-") ||
+              {isManualBlock(selectedBooking) ||
               selectedBooking.status === "completed" ||
               selectedBooking.status === "cancelled" ||
               selectedBooking.status === "rejected" ? (
@@ -702,8 +755,7 @@ export default function BookingTable({
                     />
                   </svg>
                   <span>
-                    {selectedBooking.customer_name === "Manual Block" ||
-                    selectedBooking.reference_code?.startsWith("BLK-")
+                    {isManualBlock(selectedBooking)
                       ? "Remove block"
                       : "Delete permanently"}
                   </span>
@@ -773,14 +825,12 @@ export default function BookingTable({
 
             <div className="text-center">
               <h3 className="text-xl font-bold text-black font-['Work_Sans',sans-serif] mb-1">
-                {bookingToDelete.customer_name === "Manual Block" ||
-                bookingToDelete.reference_code?.startsWith("BLK-")
+                {isManualBlock(bookingToDelete)
                   ? "Remove Manual Block?"
                   : "Delete Reservation Permanently?"}
               </h3>
               <p className="text-xs text-[#6C757D] leading-relaxed">
-                {bookingToDelete.customer_name === "Manual Block" ||
-                bookingToDelete.reference_code?.startsWith("BLK-")
+                {isManualBlock(bookingToDelete)
                   ? "This will remove the date block and make the vehicle available for booking again."
                   : "This action cannot be undone. The booking record will be permanently deleted from the database."}
               </p>
@@ -835,10 +885,10 @@ export default function BookingTable({
                 {isDeleting ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>{bookingToDelete.customer_name === "Manual Block" || bookingToDelete.reference_code?.startsWith("BLK-") ? "Removing..." : "Deleting..."}</span>
+                    <span>{isManualBlock(bookingToDelete) ? "Removing..." : "Deleting..."}</span>
                   </>
                 ) : (
-                  <span>{bookingToDelete.customer_name === "Manual Block" || bookingToDelete.reference_code?.startsWith("BLK-") ? "Remove Block" : "Delete Permanently"}</span>
+                  <span>{isManualBlock(bookingToDelete) ? "Remove Block" : "Delete Permanently"}</span>
                 )}
               </button>
             </div>

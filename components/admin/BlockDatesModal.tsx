@@ -12,7 +12,8 @@ interface BlockDatesModalProps {
     carId: string,
     pickupDate: string,
     returnDate: string,
-    notes?: string
+    notes?: string,
+    amount?: number
   ) => Promise<any>;
   onToast?: (message: string, type?: "success" | "error") => void;
 }
@@ -27,6 +28,7 @@ export default function BlockDatesModal({
   const today = getCasablancaToday();
   const [pickupDate, setPickupDate] = useState(today);
   const [returnDate, setReturnDate] = useState(today);
+  const [amountReceived, setAmountReceived] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,14 +49,25 @@ export default function BlockDatesModal({
       return;
     }
 
+    let parsedAmount: number | undefined;
+    if (amountReceived.trim()) {
+      parsedAmount = Number(amountReceived.trim());
+      if (isNaN(parsedAmount) || parsedAmount < 0) {
+        setError("Please enter a valid positive number for amount received.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       if (!car.id) throw new Error("Car ID is missing.");
-      await onBlockDates(car.id, pickupDate, returnDate, notes);
+      await onBlockDates(car.id, pickupDate, returnDate, notes, parsedAmount);
       onToast?.(
         `Dates blocked for ${car.make} ${car.model} (${pickupDate} to ${returnDate}).`,
         "success"
       );
+      setNotes("");
+      setAmountReceived("");
       onClose();
     } catch (err: any) {
       console.error("Block dates error:", err);
@@ -181,17 +194,34 @@ export default function BlockDatesModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-black mb-1">
-              Optional Note
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Phone rental - Ahmed (06XXXXXXXX)"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full h-11 px-3.5 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs text-black placeholder:text-[#6C757D] focus:outline-none focus:border-[#5937E0]"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-black mb-1">
+                Amount received (DH) <span className="font-normal text-[#6C757D]">(Optional)</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder="e.g. 1500 (optional)"
+                value={amountReceived}
+                onChange={(e) => setAmountReceived(e.target.value)}
+                className="w-full h-11 px-3.5 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs text-black placeholder:text-[#6C757D] focus:outline-none focus:border-[#5937E0]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-black mb-1">
+                Optional Note
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Phone rental - Ahmed"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full h-11 px-3.5 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs text-black placeholder:text-[#6C757D] focus:outline-none focus:border-[#5937E0]"
+              />
+            </div>
           </div>
 
           <p className="text-[11px] text-[#6C757D] leading-relaxed">
