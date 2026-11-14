@@ -1,27 +1,37 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAgencyWhatsAppNumber } from "@/constants/booking";
-import { useCustomerBookings } from "@/hooks/useCustomerBookings";
+import { useCustomerBookings, CustomerBooking } from "@/hooks/useCustomerBookings";
 import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export default function CustomerDashboardPage() {
   const router = useRouter();
   const { user, userData, isAdmin, loading: authLoading } = useAuth();
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{
+    text: string;
+    type: "success" | "error";
+  } | null>(null);
   const [statusFilter, setStatusFilter] = useState<
     "all" | "pending" | "confirmed" | "completed" | "cancelled" | "rejected"
   >("all");
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
+  const showToast = (text: string, type: "success" | "error" = "success") => {
+    setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
   };
+
+  // State for styled Cancel Confirmation Dialog
+  const [bookingToCancel, setBookingToCancel] =
+    useState<CustomerBooking | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const cancelTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -42,23 +52,52 @@ export default function CustomerDashboardPage() {
     cancelBooking,
   } = useCustomerBookings(user);
 
-  // Customer cancel pending booking with optimistic rollback
-  const handleCancelBooking = async (
-    bookingId: string,
-    referenceCode: string
+  const openCancelDialog = (
+    booking: CustomerBooking,
+    e: React.MouseEvent<HTMLButtonElement>
   ) => {
-    const confirmCancel = window.confirm(
-      `Are you sure you want to cancel booking request ${referenceCode}?`
-    );
-    if (!confirmCancel) return;
+    cancelTriggerRef.current = e.currentTarget;
+    setBookingToCancel(booking);
+  };
 
+  const handleConfirmCancel = async () => {
+    if (!bookingToCancel) return;
+    setIsCancelling(true);
+    const refCode = bookingToCancel.reference_code;
     try {
-      await cancelBooking(bookingId);
-      showToast(`Reservation ${referenceCode} has been cancelled.`);
+      await cancelBooking(bookingToCancel.id);
+      setBookingToCancel(null);
+      showToast(`Reservation ${refCode} has been cancelled.`, "success");
     } catch (err: any) {
       console.error("Error cancelling booking:", err);
-      showToast(err.message || "Failed to cancel reservation.");
+      showToast(err.message || "Failed to cancel reservation.", "error");
+    } finally {
+      setIsCancelling(false);
     }
+  };
+
+  const formatDateDisplay = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const day = parseInt(parts[2], 10);
+    const month = parseInt(parts[1], 10);
+    const year = parts[0];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    return `${day} ${months[month - 1] || month} ${year}`;
   };
 
   // In-memory instant filtering
@@ -101,8 +140,13 @@ export default function CustomerDashboardPage() {
     <main className="min-h-screen bg-[#F8F8FB] text-black pt-[130px] sm:pt-[150px] pb-24 px-4 sm:px-6 lg:px-8 font-['Work_Sans',sans-serif]">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 px-5 py-3.5 rounded-2xl bg-[#5937E0] text-white text-xs font-bold shadow-xl animate-fadeIn">
-          {toastMessage}
+        <div
+          role="status"
+          className={`fixed top-6 right-6 z-50 px-5 py-3.5 rounded-2xl text-white text-xs font-bold shadow-xl animate-fadeIn ${
+            toastMessage.type === "error" ? "bg-red-600" : "bg-[#5937E0]"
+          }`}
+        >
+          {toastMessage.text}
         </div>
       )}
 
@@ -309,10 +353,9 @@ export default function CustomerDashboardPage() {
                       {/* Cancel button if pending */}
                       {b.status === "pending" && (
                         <button
-                          onClick={() =>
-                            handleCancelBooking(b.id, b.reference_code)
-                          }
-                          disabled={cancellingId === b.id}
+                          type="button"
+                          onClick={(e) => openCancelDialog(b, e)}
+                          disabled={cancellingId === b.id || isCancelling}
                           className="px-3 py-1 rounded-full border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
                         >
                           {cancellingId === b.id
@@ -389,6 +432,54 @@ export default function CustomerDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Styled Customer Cancel Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(bookingToCancel)}
+        title="Cancel this booking request?"
+        confirmLabel="Cancel booking"
+        cancelLabel="Keep booking"
+        confirmVariant="danger"
+        isLoading={isCancelling}
+        loadingLabel="Cancelling..."
+        onConfirm={handleConfirmCancel}
+        onClose={() => setBookingToCancel(null)}
+        triggerRef={cancelTriggerRef}
+      >
+        {bookingToCancel && (
+          <div className="space-y-3">
+            {/* Reservation Summary Details Box */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-[#6C757D]">Reference:</span>
+                <strong className="font-mono font-bold text-[#5937E0] text-sm">
+                  {bookingToCancel.reference_code}
+                </strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#6C757D]">Car:</span>
+                <strong className="text-black font-semibold text-right">
+                  {bookingToCancel.cars
+                    ? `${bookingToCancel.cars.make} ${bookingToCancel.cars.model} (${bookingToCancel.cars.year})`
+                    : "Vehicle"}
+                </strong>
+              </div>
+              <div className="flex justify-between items-center pt-1 border-t border-[#E5E7EB]">
+                <span className="text-[#6C757D]">Dates:</span>
+                <strong className="text-black font-semibold">
+                  {formatDateDisplay(bookingToCancel.pickup_date)} →{" "}
+                  {formatDateDisplay(bookingToCancel.return_date)}
+                </strong>
+              </div>
+            </div>
+
+            {/* Reassurance text */}
+            <p className="text-xs text-[#6C757D] text-center leading-relaxed">
+              The dates will be released. You can book again anytime.
+            </p>
+          </div>
+        )}
+      </ConfirmDialog>
     </main>
   );
 }

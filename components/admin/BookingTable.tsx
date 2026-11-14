@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AdminBooking } from "@/hooks/useAdminData";
 import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
 import { isManualBlock } from "@/lib/utils";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 interface BookingTableProps {
   bookings: AdminBooking[];
@@ -804,96 +805,62 @@ export default function BookingTable({
 
       {/* Delete Confirmation Dialog */}
       {bookingToDelete && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[24px] border border-[#E5E7EB] shadow-2xl p-6 sm:p-8 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            {/* Warning Icon */}
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
+        <ConfirmDialog
+          isOpen={Boolean(bookingToDelete)}
+          title={
+            isManualBlock(bookingToDelete)
+              ? "Remove Manual Block?"
+              : "Delete Reservation Permanently?"
+          }
+          description={
+            isManualBlock(bookingToDelete)
+              ? "This will remove the date block and make the vehicle available for booking again."
+              : "This action cannot be undone. The booking record will be permanently deleted from the database."
+          }
+          confirmLabel={
+            isManualBlock(bookingToDelete)
+              ? "Remove Block"
+              : "Delete Permanently"
+          }
+          cancelLabel="Cancel"
+          confirmVariant="danger"
+          isLoading={isDeleting}
+          loadingLabel={
+            isManualBlock(bookingToDelete) ? "Removing..." : "Deleting..."
+          }
+          onConfirm={handleConfirmDelete}
+          onClose={() => setBookingToDelete(null)}
+        >
+          {/* Reservation Summary Details */}
+          <div className="p-4 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] space-y-2 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-[#6C757D]">Reference Code:</span>
+              <strong className="font-mono font-bold text-[#5937E0] text-sm">
+                {bookingToDelete.reference_code}
+              </strong>
             </div>
-
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-black font-['Work_Sans',sans-serif] mb-1">
-                {isManualBlock(bookingToDelete)
-                  ? "Remove Manual Block?"
-                  : "Delete Reservation Permanently?"}
-              </h3>
-              <p className="text-xs text-[#6C757D] leading-relaxed">
-                {isManualBlock(bookingToDelete)
-                  ? "This will remove the date block and make the vehicle available for booking again."
-                  : "This action cannot be undone. The booking record will be permanently deleted from the database."}
-              </p>
+            <div className="flex justify-between items-center">
+              <span className="text-[#6C757D]">Customer Name:</span>
+              <strong className="text-black font-semibold">
+                {bookingToDelete.customer_name}
+              </strong>
             </div>
-
-            {/* Reservation Summary Details */}
-            <div className="p-4 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-[#6C757D]">Reference Code:</span>
-                <strong className="font-mono font-bold text-[#5937E0] text-sm">
-                  {bookingToDelete.reference_code}
-                </strong>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#6C757D]">Customer Name:</span>
-                <strong className="text-black font-semibold">
-                  {bookingToDelete.customer_name}
-                </strong>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#6C757D]">Car:</span>
-                <strong className="text-black font-semibold text-right">
-                  {bookingToDelete.cars
-                    ? `${bookingToDelete.cars.make} ${bookingToDelete.cars.model} (${bookingToDelete.cars.year})`
-                    : "Vehicle not assigned"}
-                </strong>
-              </div>
-              <div className="flex justify-between items-center pt-1 border-t border-[#E5E7EB]">
-                <span className="text-[#6C757D]">Status:</span>
-                <span className="capitalize font-semibold text-black">
-                  {bookingToDelete.status}
-                </span>
-              </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[#6C757D]">Car:</span>
+              <strong className="text-black font-semibold text-right">
+                {bookingToDelete.cars
+                  ? `${bookingToDelete.cars.make} ${bookingToDelete.cars.model} (${bookingToDelete.cars.year})`
+                  : "Vehicle not assigned"}
+              </strong>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setBookingToDelete(null)}
-                disabled={isDeleting}
-                className="flex-1 py-3 rounded-full border border-[#E5E7EB] text-xs font-bold text-[#6C757D] hover:bg-[#F8F8FB] transition-colors cursor-pointer disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="flex-1 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isDeleting ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>{isManualBlock(bookingToDelete) ? "Removing..." : "Deleting..."}</span>
-                  </>
-                ) : (
-                  <span>{isManualBlock(bookingToDelete) ? "Remove Block" : "Delete Permanently"}</span>
-                )}
-              </button>
+            <div className="flex justify-between items-center pt-1 border-t border-[#E5E7EB]">
+              <span className="text-[#6C757D]">Status:</span>
+              <span className="capitalize font-semibold text-black">
+                {bookingToDelete.status}
+              </span>
             </div>
           </div>
-        </div>
+        </ConfirmDialog>
       )}
     </div>
   );
