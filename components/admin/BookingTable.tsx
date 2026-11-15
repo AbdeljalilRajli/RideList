@@ -523,9 +523,21 @@ export default function BookingTable({
                                   </span>
                                 )}
                                 {b.status === "confirmed" && (
-                                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
-                                    ● Confirmed
-                                  </span>
+                                  <div className="flex flex-col gap-1 items-start">
+                                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                                      ● Confirmed
+                                    </span>
+                                    {b.car_units?.status === "maintenance" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setBookingToChangeUnit(b)}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 hover:bg-orange-100 text-orange-800 text-[10px] font-bold border border-orange-300 transition-colors cursor-pointer"
+                                        title="Assigned unit is currently in maintenance. Click to reassign."
+                                      >
+                                        <span>⚠️ Unit in maintenance - reassign</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                                 {b.status === "completed" && (
                                   <span className="inline-block px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[11px] font-bold border border-blue-200">
@@ -664,30 +676,49 @@ export default function BookingTable({
                 </strong>
 
                 {selectedBooking.car_units?.plate_number ? (
-                  <div className="flex items-center justify-between p-2.5 my-2 rounded-lg bg-white border border-[#E5E7EB]">
-                    <div>
-                      <span className="text-[10px] font-bold text-[#6C757D] uppercase block">
-                        Assigned Unit Plate
-                      </span>
-                      <span className="font-mono font-bold text-xs text-black">
-                        🚘 {selectedBooking.car_units.plate_number}
-                      </span>
-                      {selectedBooking.car_units.color && (
-                        <span className="text-[#6C757D] ml-1.5 text-[11px]">
-                          ({selectedBooking.car_units.color})
+                  <>
+                    <div className="flex items-center justify-between p-2.5 my-2 rounded-lg bg-white border border-[#E5E7EB]">
+                      <div>
+                        <span className="text-[10px] font-bold text-[#6C757D] uppercase block">
+                          Assigned Unit Plate
                         </span>
+                        <span className="font-mono font-bold text-xs text-black">
+                          🚘 {selectedBooking.car_units.plate_number}
+                        </span>
+                        {selectedBooking.car_units.color && (
+                          <span className="text-[#6C757D] ml-1.5 text-[11px]">
+                            ({selectedBooking.car_units.color})
+                          </span>
+                        )}
+                      </div>
+                      {selectedBooking.status === "confirmed" && onChangeUnit && (
+                        <button
+                          type="button"
+                          onClick={() => setBookingToChangeUnit(selectedBooking)}
+                          className="px-2.5 py-1 rounded-md bg-[#5937E0] hover:bg-[#4d2ed1] text-white text-[11px] font-bold cursor-pointer"
+                        >
+                          Change Unit
+                        </button>
                       )}
                     </div>
-                    {selectedBooking.status === "confirmed" && onChangeUnit && (
-                      <button
-                        type="button"
-                        onClick={() => setBookingToChangeUnit(selectedBooking)}
-                        className="px-2.5 py-1 rounded-md bg-[#5937E0] hover:bg-[#4d2ed1] text-white text-[11px] font-bold cursor-pointer"
-                      >
-                        Change Unit
-                      </button>
+
+                    {selectedBooking.status === "confirmed" && selectedBooking.car_units?.status === "maintenance" && (
+                      <div className="flex items-center justify-between p-2.5 my-2 rounded-lg bg-orange-50 border border-orange-300">
+                        <span className="text-[11px] font-bold text-orange-800">
+                          ⚠️ Unit in maintenance - reassign
+                        </span>
+                        {onChangeUnit && (
+                          <button
+                            type="button"
+                            onClick={() => setBookingToChangeUnit(selectedBooking)}
+                            className="px-2.5 py-1 rounded-md bg-[#5937E0] hover:bg-[#4d2ed1] text-white text-[11px] font-bold cursor-pointer"
+                          >
+                            Change Unit
+                          </button>
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </>
                 ) : (
                   selectedBooking.status === "confirmed" && (
                     <div className="flex items-center justify-between p-2.5 my-2 rounded-lg bg-amber-50 border border-amber-200">

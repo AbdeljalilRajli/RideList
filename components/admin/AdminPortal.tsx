@@ -182,7 +182,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
 
   const fleetTabs = [
     { key: "all", label: `All (${carsStats.total})` },
-    { key: "available", label: `Available (${carsStats.available})` },
+    { key: "available", label: `Active (${carsStats.available})` },
     { key: "rented", label: `Rented (${carsStats.rented})` },
     { key: "maintenance", label: `Maintenance (${carsStats.maintenance})` },
     { key: "hidden", label: `Hidden (${carsStats.hidden})` },
@@ -436,17 +436,17 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
                     </div>
                   </div>
 
-                  {/* Card 2: Available */}
+                  {/* Card 2: Active */}
                   <div className="bg-white rounded-[20px] border border-[#E5E7EB] p-5 sm:p-6 shadow-xs">
                     <span className="text-xs font-semibold text-[#6C757D] block mb-1">
-                      Available for Rent
+                      Active Listings
                     </span>
                     <div className="flex items-baseline justify-between">
                       <span className="text-2xl sm:text-3xl font-extrabold text-[#10B981]">
                         {carsStats.available}
                       </span>
                       <span className="text-[11px] font-bold text-[#10B981]">
-                        Bookable
+                        Active
                       </span>
                     </div>
                   </div>
@@ -677,30 +677,37 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
                             <td className="py-4 px-6">
                               <div className="flex flex-col gap-1.5 items-start">
                                 {/* Multi-unit Availability Badge */}
-                                {car.total_units_count !== undefined && (
-                                  <span
-                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                      car.status === "maintenance"
-                                        ? "bg-amber-50 text-amber-800 border-amber-200"
-                                        : (car.available_units_count || 0) > 0
-                                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                        : "bg-red-50 text-red-800 border-red-200"
-                                    }`}
-                                  >
+                                {car.total_units_count !== undefined && (() => {
+                                  const freeCount = car.available_units_count ?? 0;
+                                  const totalCount = car.total_units_count ?? 1;
+                                  const isMaint = car.status === "maintenance";
+                                  const isZero = freeCount === 0;
+
+                                  return (
                                     <span
-                                      className={`w-1.5 h-1.5 rounded-full ${
-                                        car.status === "maintenance"
-                                          ? "bg-amber-500"
-                                          : (car.available_units_count || 0) > 0
-                                          ? "bg-emerald-500"
-                                          : "bg-red-500"
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                        isMaint
+                                          ? "bg-amber-50 text-amber-800 border-amber-200"
+                                          : isZero
+                                          ? "bg-red-50 text-red-800 border-red-200"
+                                          : "bg-[#EEEDF9] text-[#5937E0] border-purple-200"
                                       }`}
-                                    ></span>
-                                    {car.status === "maintenance"
-                                      ? "Maintenance"
-                                      : `${car.available_units_count || 0} of ${car.total_units_count || 1} available now`}
-                                  </span>
-                                )}
+                                    >
+                                      <span
+                                        className={`w-1.5 h-1.5 rounded-full ${
+                                          isMaint
+                                            ? "bg-amber-500"
+                                            : isZero
+                                            ? "bg-red-500"
+                                            : "bg-[#5937E0]"
+                                        }`}
+                                      ></span>
+                                      {isMaint
+                                        ? "Maintenance"
+                                        : `${freeCount} of ${totalCount} free now`}
+                                    </span>
+                                  );
+                                })()}
 
                                 {car.id && rentedNowMap[car.id] && (
                                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#181524] text-white text-[11px] font-bold shadow-sm whitespace-nowrap">
@@ -731,7 +738,7 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
                                         : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
                                     }`}
                                   >
-                                    <option value="available">● Available</option>
+                                    <option value="available">● Active</option>
                                     <option value="maintenance">
                                       ● Maintenance
                                     </option>

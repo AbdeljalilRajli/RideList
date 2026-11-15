@@ -318,31 +318,35 @@ export function useAdminData(enabled: boolean = true) {
   }, [bookings]);
 
   // Enrich cars with unit availability counts computed from live bookings and car_units
+  // Availability Rule: Supply = available units only; Demand = ALL confirmed bookings for this car
   const enrichedCars: CarProps[] = useMemo(() => {
     const today = getCasablancaToday();
     return cars.map((car) => {
       const units = car.units || [];
       const totalCount = units.length;
+
+      // Demand today = all active confirmed bookings for this car model covering today
+      const demandToday = bookings.filter(
+        (b) =>
+          b.car_id === car.id &&
+          b.status === "confirmed" &&
+          b.pickup_date <= today &&
+          b.return_date >= today
+      ).length;
+
       if (totalCount === 0) {
-        const isRented = Boolean(car.id && rentedNowMap[car.id]);
+        const supply = 1;
+        const availableNow = Math.max(0, supply - demandToday);
         return {
           ...car,
           total_units_count: 1,
-          available_units_count: car.status === "available" && !isRented ? 1 : 0,
+          available_units_count: car.status === "available" ? availableNow : 0,
         };
       }
 
-      const availableNow = units.filter((u) => {
-        if (u.status !== "available") return false;
-        const isOccupiedToday = bookings.some(
-          (b) =>
-            b.unit_id === u.id &&
-            b.status === "confirmed" &&
-            b.pickup_date <= today &&
-            b.return_date >= today
-        );
-        return !isOccupiedToday;
-      }).length;
+      // Supply = count of units with status 'available'
+      const supply = units.filter((u) => u.status === "available").length;
+      const availableNow = Math.max(0, supply - demandToday);
 
       return {
         ...car,
@@ -350,7 +354,7 @@ export function useAdminData(enabled: boolean = true) {
         available_units_count: car.status === "available" ? availableNow : 0,
       };
     });
-  }, [cars, bookings, rentedNowMap]);
+  }, [cars, bookings]);
 
   const carsStats: AdminCarsStats = useMemo(() => {
     const rentedCount = enrichedCars.filter(

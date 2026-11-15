@@ -37,6 +37,7 @@ export default function CarFormModal({
   const isEditing = Boolean(carToEdit);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<"details" | "units">("details");
+  const [unitsCount, setUnitsCount] = useState<number>(carToEdit?.units?.length ?? 0);
 
   // Form State
   const [make, setMake] = useState("");
@@ -76,6 +77,7 @@ export default function CarFormModal({
       setDeletedExistingUrls([]);
 
       if (carToEdit) {
+        setUnitsCount(carToEdit.units?.length ?? 1);
         setMake(carToEdit.make || "");
         setModel(carToEdit.model || "");
         setYear(carToEdit.year || 2024);
@@ -400,11 +402,9 @@ export default function CarFormModal({
               }`}
             >
               <span>🚘 Units & Inventory</span>
-              {carToEdit.units && (
-                <span className="px-2 py-0.5 rounded-full bg-[#EEEDF9] text-[#5937E0] text-[10px] font-bold">
-                  {carToEdit.units.length}
-                </span>
-              )}
+              <span className="px-2 py-0.5 rounded-full bg-[#EEEDF9] text-[#5937E0] text-[10px] font-bold">
+                {unitsCount}
+              </span>
             </button>
           </div>
         )}
@@ -418,6 +418,7 @@ export default function CarFormModal({
               carModel={carToEdit.model}
               initialUnits={carToEdit.units}
               onUnitsChanged={onUnitsChanged}
+              onUnitsCountChange={setUnitsCount}
               onToast={onToast}
             />
           </div>
@@ -727,7 +728,7 @@ export default function CarFormModal({
                   onChange={(e) => setStatus(e.target.value as any)}
                   className="w-full h-11 px-3 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black font-bold focus:outline-none focus:border-[#5937E0]"
                 >
-                  <option value="available">Available (Public)</option>
+                  <option value="available">Active (Public)</option>
                   <option value="maintenance">Maintenance</option>
                   <option value="hidden">Hidden (Admin only)</option>
                 </select>
