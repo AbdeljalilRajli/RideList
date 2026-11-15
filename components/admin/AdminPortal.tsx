@@ -96,6 +96,8 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
     deleteCar,
     deleteBooking,
     blockCarDates,
+    confirmBookingWithUnit,
+    changeBookingUnit,
   } = useAdminData(isAdmin);
 
   // Quick Status Toggle directly from Table with optimistic rollback
@@ -120,14 +122,23 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
           .toLowerCase()
           .includes(searchQuery.toLowerCase().trim());
 
-      const isRentedNow = Boolean(car.id && rentedNowMap[car.id]);
+      const isRentedNow =
+        car.available_units_count !== undefined
+          ? car.available_units_count === 0 && car.status === "available"
+          : Boolean(car.id && rentedNowMap[car.id]);
+
+      const isAvailable =
+        car.available_units_count !== undefined
+          ? (car.available_units_count || 0) > 0 && car.status === "available"
+          : car.status === "available" && !isRentedNow;
+
       const matchesStatus =
         statusFilter === "all"
           ? true
           : statusFilter === "rented"
           ? isRentedNow
           : statusFilter === "available"
-          ? car.status === "available" && !isRentedNow
+          ? isAvailable
           : car.status === statusFilter;
 
       return matchesSearch && matchesStatus;
@@ -662,9 +673,35 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
                               </span>
                             </td>
 
-                            {/* 4. Quick Status Switcher */}
+                            {/* 4. Quick Status Switcher & Unit Capacity */}
                             <td className="py-4 px-6">
                               <div className="flex flex-col gap-1.5 items-start">
+                                {/* Multi-unit Availability Badge */}
+                                {car.total_units_count !== undefined && (
+                                  <span
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                      car.status === "maintenance"
+                                        ? "bg-amber-50 text-amber-800 border-amber-200"
+                                        : (car.available_units_count || 0) > 0
+                                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                        : "bg-red-50 text-red-800 border-red-200"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full ${
+                                        car.status === "maintenance"
+                                          ? "bg-amber-500"
+                                          : (car.available_units_count || 0) > 0
+                                          ? "bg-emerald-500"
+                                          : "bg-red-500"
+                                      }`}
+                                    ></span>
+                                    {car.status === "maintenance"
+                                      ? "Maintenance"
+                                      : `${car.available_units_count || 0} of ${car.total_units_count || 1} available now`}
+                                  </span>
+                                )}
+
                                 {car.id && rentedNowMap[car.id] && (
                                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#181524] text-white text-[11px] font-bold shadow-sm whitespace-nowrap">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -798,6 +835,8 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
             lastUpdated={lastUpdated}
             onRefresh={refresh}
             onUpdateStatus={updateBookingStatus}
+            onConfirmWithUnit={confirmBookingWithUnit}
+            onChangeUnit={changeBookingUnit}
             onDeleteBooking={deleteBooking}
             actionLoadingId={actionLoadingId}
             onToast={showToast}
@@ -813,6 +852,8 @@ function AdminPortalContent({ initialTab }: AdminPortalProps) {
           setIsFormModalOpen(false);
           setCarToEdit(null);
         }}
+        onUnitsChanged={refresh}
+        onToast={showToast}
         onSaved={(savedCar, isNew) => {
           saveCar(savedCar, isNew);
           if (isNew) {

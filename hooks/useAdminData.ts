@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { CarProps } from "@/types";
+import { CarProps, CarUnit } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { getCasablancaToday, isManualBlock } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ export interface AdminBooking {
   id: string;
   reference_code: string;
   car_id: string;
+  unit_id?: string | null;
   user_id: string | null;
   customer_name: string;
   customer_phone: string;
@@ -34,6 +35,12 @@ export interface AdminBooking {
     model: string;
     year: number;
     images?: string[];
+  } | null;
+  car_units?: {
+    id: string;
+    plate_number: string;
+    color?: string;
+    status: string;
   } | null;
 }
 
@@ -80,7 +87,12 @@ export function useAdminData(enabled: boolean = true) {
         const [carsRes, bookingsRes] = await Promise.all([
           supabase
             .from("cars")
-            .select("*")
+            .select(
+              `
+              *,
+              units:car_units (*)
+            `
+            )
             .order("created_at", { ascending: false }),
           supabase
             .from("bookings")
@@ -92,6 +104,12 @@ export function useAdminData(enabled: boolean = true) {
                 model,
                 year,
                 images
+              ),
+              car_units:unit_id (
+                id,
+                plate_number,
+                color,
+                status
               )
             `
             )
@@ -152,6 +170,12 @@ export function useAdminData(enabled: boolean = true) {
                   model,
                   year,
                   images
+                ),
+                car_units:unit_id (
+                  id,
+                  plate_number,
+                  color,
+                  status
                 )
               `
               )
@@ -214,6 +238,14 @@ export function useAdminData(enabled: boolean = true) {
           }
 
           setLastUpdated(new Date());
+        }
+      )
+      // Listen to all changes on public.car_units
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "car_units" },
+        () => {
+          fetchData(true);
         }
       )
       .subscribe((status) => {
@@ -285,16 +317,55 @@ export function useAdminData(enabled: boolean = true) {
     return map;
   }, [bookings]);
 
+  // Enrich cars with unit availability counts computed from live bookings and car_units
+  const enrichedCars: CarProps[] = useMemo(() => {
+    const today = getCasablancaToday();
+    return cars.map((car) => {
+      const units = car.units || [];
+      const totalCount = units.length;
+      if (totalCount === 0) {
+        const isRented = Boolean(car.id && rentedNowMap[car.id]);
+        return {
+          ...car,
+          total_units_count: 1,
+          available_units_count: car.status === "available" && !isRented ? 1 : 0,
+        };
+      }
+
+      const availableNow = units.filter((u) => {
+        if (u.status !== "available") return false;
+        const isOccupiedToday = bookings.some(
+          (b) =>
+            b.unit_id === u.id &&
+            b.status === "confirmed" &&
+            b.pickup_date <= today &&
+            b.return_date >= today
+        );
+        return !isOccupiedToday;
+      }).length;
+
+      return {
+        ...car,
+        total_units_count: totalCount,
+        available_units_count: car.status === "available" ? availableNow : 0,
+      };
+    });
+  }, [cars, bookings, rentedNowMap]);
+
   const carsStats: AdminCarsStats = useMemo(() => {
-    const rentedCount = cars.filter((c) => Boolean(c.id && rentedNowMap[c.id])).length;
+    const rentedCount = enrichedCars.filter(
+      (c) => (c.available_units_count ?? 1) === 0 && c.status === "available"
+    ).length;
     return {
-      total: cars.length,
-      available: cars.filter((c) => c.status === "available" && (!c.id || !rentedNowMap[c.id])).length,
+      total: enrichedCars.length,
+      available: enrichedCars.filter(
+        (c) => (c.available_units_count ?? 1) > 0 && c.status === "available"
+      ).length,
       rented: rentedCount,
-      maintenance: cars.filter((c) => c.status === "maintenance").length,
-      hidden: cars.filter((c) => c.status === "hidden").length,
+      maintenance: enrichedCars.filter((c) => c.status === "maintenance").length,
+      hidden: enrichedCars.filter((c) => c.status === "hidden").length,
     };
-  }, [cars, rentedNowMap]);
+  }, [enrichedCars]);
 
   // 6. Optimistic Action: Update Booking Status with rollback
   const updateBookingStatus = async (
@@ -442,7 +513,8 @@ export function useAdminData(enabled: boolean = true) {
     pickupDate: string,
     returnDate: string,
     notes?: string,
-    amount?: number
+    amount?: number,
+    unitId?: string
   ) => {
     if (!pickupDate || !returnDate) {
       throw new Error("Pickup date and return date are required.");
@@ -451,26 +523,13 @@ export function useAdminData(enabled: boolean = true) {
       throw new Error("Return date must be equal to or after pickup date.");
     }
 
-    // Overlap rule against existing confirmed bookings for this car
-    const hasOverlap = bookings.some(
-      (b) =>
-        b.car_id === carId &&
-        b.status === "confirmed" &&
-        b.pickup_date <= returnDate &&
-        b.return_date >= pickupDate
-    );
-
-    if (hasOverlap) {
-      throw new Error(
-        `Cannot block dates: This vehicle already has a confirmed booking overlapping with ${pickupDate} to ${returnDate}.`
-      );
-    }
-
     const { data, error } = await supabase.rpc("block_car_dates", {
       p_car_id: carId,
       p_pickup_date: pickupDate,
       p_return_date: returnDate,
       p_notes: notes?.trim() || null,
+      p_amount_received: amount || 0,
+      p_unit_id: unitId || null,
     });
 
     if (error) {
@@ -495,8 +554,162 @@ export function useAdminData(enabled: boolean = true) {
     return data;
   };
 
+  // Unit Management Actions
+  const addCarUnit = async (
+    carId: string,
+    unitData: {
+      plate_number: string;
+      color?: string;
+      status?: "available" | "maintenance";
+      notes?: string;
+    }
+  ) => {
+    const { data, error } = await supabase
+      .from("car_units")
+      .insert({
+        car_id: carId,
+        plate_number: unitData.plate_number.trim().toUpperCase(),
+        color: unitData.color?.trim() || "Standard",
+        status: unitData.status || "available",
+        notes: unitData.notes?.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "23505" || error.message?.includes("unique")) {
+        throw new Error(
+          `A vehicle unit with plate "${unitData.plate_number.trim().toUpperCase()}" already exists. Plates must be globally unique.`
+        );
+      }
+      throw new Error(error.message || "Failed to add vehicle unit.");
+    }
+
+    await fetchData(true);
+    return data;
+  };
+
+  const updateCarUnit = async (
+    unitId: string,
+    updates: Partial<CarUnit>
+  ) => {
+    const { data, error } = await supabase
+      .from("car_units")
+      .update(updates)
+      .eq("id", unitId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "23505" || error.message?.includes("unique")) {
+        throw new Error("This license plate is already assigned to another unit.");
+      }
+      throw new Error(error.message || "Failed to update vehicle unit.");
+    }
+
+    await fetchData(true);
+    return data;
+  };
+
+  const deleteCarUnit = async (unitId: string) => {
+    const { error } = await supabase
+      .from("car_units")
+      .delete()
+      .eq("id", unitId);
+
+    if (error) {
+      if (error.message?.includes("reservations") || error.message?.includes("maintenance")) {
+        throw new Error(error.message);
+      }
+      throw new Error(error.message || "Failed to delete vehicle unit.");
+    }
+
+    await fetchData(true);
+  };
+
+  const bulkAddCarUnits = async (
+    carId: string,
+    plates: string[],
+    color: string = "Standard"
+  ) => {
+    if (!plates || plates.length === 0) return;
+    const cleanPlates = Array.from(
+      new Set(plates.map((p) => p.trim().toUpperCase()).filter(Boolean))
+    );
+    if (cleanPlates.length === 0) return;
+
+    const rows = cleanPlates.map((plate) => ({
+      car_id: carId,
+      plate_number: plate,
+      color: color || "Standard",
+      status: "available" as const,
+      notes: "Bulk added unit",
+    }));
+
+    const { data, error } = await supabase
+      .from("car_units")
+      .insert(rows)
+      .select();
+
+    if (error) {
+      if (error.code === "23505" || error.message?.includes("unique")) {
+        throw new Error(
+          "One or more license plates already exist. Plates must be unique."
+        );
+      }
+      throw new Error(error.message || "Failed to bulk add vehicle units.");
+    }
+
+    await fetchData(true);
+    return data;
+  };
+
+  const confirmBookingWithUnit = async (
+    bookingId: string,
+    unitId?: string
+  ) => {
+    setActionLoadingId(bookingId);
+    try {
+      const { data, error } = await supabase.rpc("confirm_booking", {
+        p_booking_id: bookingId,
+        p_unit_id: unitId || null,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      await fetchData(true);
+      return data;
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const changeBookingUnit = async (
+    bookingId: string,
+    newUnitId: string
+  ) => {
+    setActionLoadingId(bookingId);
+    try {
+      const { data, error } = await supabase.rpc("change_booking_unit", {
+        p_booking_id: bookingId,
+        p_new_unit_id: newUnitId,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      await fetchData(true);
+      return data;
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   return {
-    cars,
+    cars: enrichedCars,
     bookings,
     rentedNowMap,
     loading,
@@ -512,5 +725,11 @@ export function useAdminData(enabled: boolean = true) {
     deleteCar,
     deleteBooking,
     blockCarDates,
+    addCarUnit,
+    updateCarUnit,
+    deleteCarUnit,
+    bulkAddCarUnits,
+    confirmBookingWithUnit,
+    changeBookingUnit,
   };
 }

@@ -7,12 +7,15 @@ import { compressAndResizeImage, formatBytes } from "@/lib/imageCompression";
 import { uploadCarImage, deleteCarImages } from "@/lib/carStorage";
 import { supabase } from "@/lib/supabase";
 import { BODY_TYPES, CAR_SEGMENTS, formatBodyType, formatSegment } from "@/lib/carTaxonomy";
+import CarUnitsManager from "@/components/admin/CarUnitsManager";
 
 interface CarFormModalProps {
   isOpen: boolean;
   carToEdit?: CarProps | null;
   onClose: () => void;
   onSaved: (savedCar: CarProps, isNew: boolean) => void;
+  onUnitsChanged?: () => void;
+  onToast?: (message: string, type?: "success" | "error") => void;
 }
 
 interface ImageItem {
@@ -28,9 +31,12 @@ export default function CarFormModal({
   carToEdit,
   onClose,
   onSaved,
+  onUnitsChanged,
+  onToast,
 }: CarFormModalProps) {
   const isEditing = Boolean(carToEdit);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<"details" | "units">("details");
 
   // Form State
   const [make, setMake] = useState("");
@@ -370,8 +376,53 @@ export default function CarFormModal({
           </button>
         </div>
 
-        {/* Modal Form Scrollable Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 sm:p-8 flex-1 space-y-8">
+        {/* Tab Navigation for Editing */}
+        {isEditing && carToEdit?.id && (
+          <div className="flex border-b border-[#E5E7EB] px-8 bg-[#F8F8FB] shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab("details")}
+              className={`py-3.5 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                activeTab === "details"
+                  ? "border-[#5937E0] text-[#5937E0] bg-white shadow-2xs"
+                  : "border-transparent text-[#6C757D] hover:text-black"
+              }`}
+            >
+              📋 Vehicle Details & Specs
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("units")}
+              className={`py-3.5 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === "units"
+                  ? "border-[#5937E0] text-[#5937E0] bg-white shadow-2xs"
+                  : "border-transparent text-[#6C757D] hover:text-black"
+              }`}
+            >
+              <span>🚘 Units & Inventory</span>
+              {carToEdit.units && (
+                <span className="px-2 py-0.5 rounded-full bg-[#EEEDF9] text-[#5937E0] text-[10px] font-bold">
+                  {carToEdit.units.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Modal Body: Active Tab Content */}
+        {isEditing && carToEdit?.id && activeTab === "units" ? (
+          <div className="overflow-y-auto p-6 sm:p-8 flex-1">
+            <CarUnitsManager
+              carId={carToEdit.id}
+              carMake={carToEdit.make}
+              carModel={carToEdit.model}
+              initialUnits={carToEdit.units}
+              onUnitsChanged={onUnitsChanged}
+              onToast={onToast}
+            />
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="overflow-y-auto p-6 sm:p-8 flex-1 space-y-8">
           {errorMessage && (
             <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold">
               {errorMessage}
@@ -767,6 +818,7 @@ export default function CarFormModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

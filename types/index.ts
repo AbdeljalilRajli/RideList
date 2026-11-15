@@ -18,6 +18,17 @@ export type CarSegment =
   | "premium"
   | "luxury";
 
+export interface CarUnit {
+  id: string;
+  car_id: string;
+  plate_number: string;
+  color?: string;
+  status: "available" | "maintenance";
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface CarProps {
   id?: string;
   city_mpg: number;
@@ -43,6 +54,9 @@ export interface CarProps {
   km_policy?: string;
   deposit_amount?: number;
   created_at?: string;
+  units?: CarUnit[];
+  available_units_count?: number;
+  total_units_count?: number;
 }
 
 export type CarState = CarProps[] & { message?: string };

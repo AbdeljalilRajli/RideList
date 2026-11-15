@@ -13,7 +13,8 @@ interface BlockDatesModalProps {
     pickupDate: string,
     returnDate: string,
     notes?: string,
-    amount?: number
+    amount?: number,
+    unitId?: string
   ) => Promise<any>;
   onToast?: (message: string, type?: "success" | "error") => void;
 }
@@ -29,6 +30,7 @@ export default function BlockDatesModal({
   const [pickupDate, setPickupDate] = useState(today);
   const [returnDate, setReturnDate] = useState(today);
   const [amountReceived, setAmountReceived] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +63,21 @@ export default function BlockDatesModal({
     setIsSubmitting(true);
     try {
       if (!car.id) throw new Error("Car ID is missing.");
-      await onBlockDates(car.id, pickupDate, returnDate, notes, parsedAmount);
+      await onBlockDates(
+        car.id,
+        pickupDate,
+        returnDate,
+        notes,
+        parsedAmount,
+        selectedUnitId || undefined
+      );
       onToast?.(
         `Dates blocked for ${car.make} ${car.model} (${pickupDate} to ${returnDate}).`,
         "success"
       );
       setNotes("");
       setAmountReceived("");
+      setSelectedUnitId("");
       onClose();
     } catch (err: any) {
       console.error("Block dates error:", err);
@@ -193,6 +203,26 @@ export default function BlockDatesModal({
               />
             </div>
           </div>
+
+          {car.units && car.units.length > 0 && (
+            <div>
+              <label className="block text-xs font-bold text-black mb-1">
+                Target Vehicle Unit <span className="font-normal text-[#6C757D]">(Optional)</span>
+              </label>
+              <select
+                value={selectedUnitId}
+                onChange={(e) => setSelectedUnitId(e.target.value)}
+                className="w-full h-11 px-3.5 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-xs font-semibold text-black focus:outline-none focus:border-[#5937E0] cursor-pointer"
+              >
+                <option value="">Auto-assign any free unit</option>
+                {car.units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.plate_number} — {u.color || "Standard"} ({u.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

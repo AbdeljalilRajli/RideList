@@ -6,6 +6,8 @@ import { AdminBooking } from "@/hooks/useAdminData";
 import DataFreshnessBadge from "@/components/common/DataFreshnessBadge";
 import { isManualBlock } from "@/lib/utils";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import ConfirmBookingModal from "@/components/admin/ConfirmBookingModal";
+import ChangeUnitModal from "@/components/admin/ChangeUnitModal";
 
 interface BookingTableProps {
   bookings: AdminBooking[];
@@ -17,6 +19,8 @@ interface BookingTableProps {
     booking: AdminBooking,
     newStatus: "confirmed" | "rejected" | "completed" | "cancelled"
   ) => Promise<void>;
+  onConfirmWithUnit?: (bookingId: string, unitId?: string) => Promise<any>;
+  onChangeUnit?: (bookingId: string, newUnitId: string) => Promise<any>;
   onDeleteBooking?: (bookingId: string) => Promise<void>;
   actionLoadingId: string | null;
   onToast?: (text: string, type?: "success" | "error") => void;
@@ -40,6 +44,8 @@ export default function BookingTable({
   lastUpdated,
   onRefresh,
   onUpdateStatus,
+  onConfirmWithUnit,
+  onChangeUnit,
   onDeleteBooking,
   actionLoadingId,
   onToast,
@@ -51,6 +57,16 @@ export default function BookingTable({
 
   // Selected booking for full details modal
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(
+    null
+  );
+
+  // Unit confirmation modal state
+  const [bookingToConfirm, setBookingToConfirm] = useState<AdminBooking | null>(
+    null
+  );
+
+  // Unit change modal state
+  const [bookingToChangeUnit, setBookingToChangeUnit] = useState<AdminBooking | null>(
     null
   );
 
@@ -109,6 +125,7 @@ export default function BookingTable({
         b.reference_code.toLowerCase().includes(q) ||
         b.customer_name.toLowerCase().includes(q) ||
         b.customer_phone.includes(q) ||
+        Boolean(b.car_units?.plate_number && b.car_units.plate_number.toLowerCase().includes(q)) ||
         `${b.cars?.make || ""} ${b.cars?.model || ""}`
           .toLowerCase()
           .includes(q) ||
@@ -387,9 +404,16 @@ export default function BookingTable({
                             <span className="font-bold text-black text-xs block">
                               {b.cars?.make} {b.cars?.model}
                             </span>
-                            <span className="text-[11px] text-[#6C757D]">
-                              {b.cars?.year}
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[11px] text-[#6C757D]">
+                                {b.cars?.year}
+                              </span>
+                              {b.car_units?.plate_number && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#F1F3F5] text-black font-mono font-bold text-[10px] border border-[#E5E7EB]">
+                                  🚘 {b.car_units.plate_number}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -533,9 +557,13 @@ export default function BookingTable({
                               {b.status === "pending" && !isManualBlock(b) && (
                                 <>
                                   <button
-                                    onClick={() =>
-                                      handleAction(b, "confirmed")
-                                    }
+                                    onClick={() => {
+                                      if (onConfirmWithUnit) {
+                                        setBookingToConfirm(b);
+                                      } else {
+                                        handleAction(b, "confirmed");
+                                      }
+                                    }}
                                     className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-2xs cursor-pointer"
                                   >
                                     Confirm
@@ -567,6 +595,15 @@ export default function BookingTable({
                                     >
                                       Complete
                                     </button>
+                                    {onChangeUnit && (
+                                      <button
+                                        onClick={() => setBookingToChangeUnit(b)}
+                                        className="px-2.5 py-1 rounded-md bg-purple-50 hover:bg-purple-100 text-[#5937E0] text-[10px] font-bold border border-purple-200 cursor-pointer"
+                                        title="Change vehicle unit (e.g. for breakdown)"
+                                      >
+                                        Change Unit
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() =>
                                         handleAction(b, "cancelled")
@@ -625,6 +662,51 @@ export default function BookingTable({
                   {selectedBooking.cars?.make} {selectedBooking.cars?.model} (
                   {selectedBooking.cars?.year})
                 </strong>
+
+                {selectedBooking.car_units?.plate_number ? (
+                  <div className="flex items-center justify-between p-2.5 my-2 rounded-lg bg-white border border-[#E5E7EB]">
+                    <div>
+                      <span className="text-[10px] font-bold text-[#6C757D] uppercase block">
+                        Assigned Unit Plate
+                      </span>
+                      <span className="font-mono font-bold text-xs text-black">
+                        🚘 {selectedBooking.car_units.plate_number}
+                      </span>
+                      {selectedBooking.car_units.color && (
+                        <span className="text-[#6C757D] ml-1.5 text-[11px]">
+                          ({selectedBooking.car_units.color})
+                        </span>
+                      )}
+                    </div>
+                    {selectedBooking.status === "confirmed" && onChangeUnit && (
+                      <button
+                        type="button"
+                        onClick={() => setBookingToChangeUnit(selectedBooking)}
+                        className="px-2.5 py-1 rounded-md bg-[#5937E0] hover:bg-[#4d2ed1] text-white text-[11px] font-bold cursor-pointer"
+                      >
+                        Change Unit
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  selectedBooking.status === "confirmed" && (
+                    <div className="flex items-center justify-between p-2.5 my-2 rounded-lg bg-amber-50 border border-amber-200">
+                      <span className="text-[11px] text-amber-800 font-bold">
+                        No physical unit assigned
+                      </span>
+                      {onChangeUnit && (
+                        <button
+                          type="button"
+                          onClick={() => setBookingToChangeUnit(selectedBooking)}
+                          className="px-2.5 py-1 rounded-md bg-[#5937E0] text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          Assign Unit
+                        </button>
+                      )}
+                    </div>
+                  )
+                )}
+
                 <p className="text-[#6C757D]">
                   Pickup: {selectedBooking.pickup_date} at{" "}
                   {selectedBooking.pickup_time} ({selectedBooking.pickup_place})
@@ -862,6 +944,39 @@ export default function BookingTable({
           </div>
         </ConfirmDialog>
       )}
+
+      {/* 4. Unit Confirmation Modal */}
+      <ConfirmBookingModal
+        isOpen={Boolean(bookingToConfirm)}
+        booking={bookingToConfirm}
+        onClose={() => setBookingToConfirm(null)}
+        onConfirm={async (bookingId, unitId) => {
+          if (onConfirmWithUnit) {
+            await onConfirmWithUnit(bookingId, unitId);
+          } else {
+            await onUpdateStatus(bookingToConfirm!, "confirmed");
+          }
+          setBookingToConfirm(null);
+        }}
+        onToast={onToast}
+      />
+
+      {/* 5. Change Unit Modal */}
+      <ChangeUnitModal
+        isOpen={Boolean(bookingToChangeUnit)}
+        booking={bookingToChangeUnit}
+        onClose={() => setBookingToChangeUnit(null)}
+        onChangeUnit={async (bookingId, newUnitId) => {
+          if (onChangeUnit) {
+            await onChangeUnit(bookingId, newUnitId);
+          }
+          if (selectedBooking && selectedBooking.id === bookingId) {
+            setSelectedBooking(null);
+          }
+          setBookingToChangeUnit(null);
+        }}
+        onToast={onToast}
+      />
     </div>
   );
 }
