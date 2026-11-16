@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Reveal from "@/components/Reveal";
-import { AGENCY_CONFIG } from "@/constants/agency";
 
 const brandLogos = [
   { name: "Toyota", src: "/Brands Logos/Toyota.png", alt: "Toyota logo", width: 164, height: 108, query: "Toyota" },
@@ -234,92 +233,7 @@ export default function ContactPage() {
       </section>
 
       {/* =========================================================================
-          3. CONTACT DETAILS STRIP (Left-aligned column on mobile, 4 in a row on desktop)
-         ========================================================================= */}
-      <section className="max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 py-10 sm:py-12 border-y border-[#E5E7EB]">
-        <div className="flex flex-col items-start gap-8 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:gap-6 sm:items-center">
-          {/* Item 1: Address */}
-          <Reveal delay={0} className="w-full">
-            <div className="flex items-center gap-4 w-full min-w-0">
-              <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
-                <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Address</span>
-                <a
-                  href={AGENCY_CONFIG.addressMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug break-words"
-                >
-                  {AGENCY_CONFIG.address}
-                </a>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Item 2: Email */}
-          <Reveal delay={80} className="w-full">
-            <div className="flex items-center gap-4 w-full min-w-0">
-              <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
-                <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Email</span>
-                <a
-                  href={AGENCY_CONFIG.emailMailto}
-                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug break-all"
-                >
-                  {AGENCY_CONFIG.email}
-                </a>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Item 3: Phone */}
-          <Reveal delay={160} className="w-full">
-            <div className="flex items-center gap-4 w-full min-w-0">
-              <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-              </div>
-              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
-                <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Phone</span>
-                <a
-                  href={AGENCY_CONFIG.phoneTel}
-                  className="text-sm sm:text-base font-semibold text-black block hover:text-[#5937E0] transition-colors leading-snug whitespace-nowrap"
-                >
-                  {AGENCY_CONFIG.phoneDisplay}
-                </a>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Item 4: Opening hours */}
-          <Reveal delay={240} className="w-full">
-            <div className="flex items-center gap-4 w-full min-w-0">
-              <div className="w-12 h-12 rounded-full bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-sm">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="font-['Work_Sans',sans-serif] min-w-0 flex-1 text-left">
-                <span className="text-xs sm:text-sm font-normal text-[#6C757D] block mb-0.5">Opening hours</span>
-                <span className="text-sm sm:text-base font-semibold text-black block leading-snug">Sun–Mon: 10am – 10pm</span>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          4. SUPPORTED AUTOMOBILE BRANDS STRIP (Exact Figma Component)
+          3. SUPPORTED AUTOMOBILE BRANDS STRIP (Exact Figma Component)
          ========================================================================= */}
       <section className="max-w-[1440px] mx-auto px-6 lg:px-16 pb-20 sm:pb-28">
         <Reveal delay={0}>
