@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { getCarForMetadata } from "@/lib/getCarForMetadata";
 import { getCarImage } from "@/lib/utils";
 import { CarProps } from "@/types";
+import { normalizeFuel, normalizeTransmission } from "@/lib/carTaxonomy";
 
 export const runtime = "nodejs";
 export const revalidate = 3600; // Sensible cache: 1 hour
@@ -81,13 +82,8 @@ export default async function Image({
   const carImageBase64 = await loadCarImageBase64(car);
 
   const carName = `${car.make} ${car.model}`;
-  const transmission =
-    car.transmission === "a" || car.transmission === "automatic"
-      ? "Automatic"
-      : "Manual";
-  const fuel = car.fuel_type
-    ? car.fuel_type.charAt(0).toUpperCase() + car.fuel_type.slice(1)
-    : "Petrol";
+  const transmission = normalizeTransmission(car.transmission);
+  const fuel = normalizeFuel(car.fuel_type);
   const seats = `${car.seats || 5} Seats`;
   const price = car.price_per_day || (car as any).price || 500;
 

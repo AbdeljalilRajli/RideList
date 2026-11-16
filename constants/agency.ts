@@ -43,4 +43,14 @@ export const AGENCY_CONFIG = {
   get whatsappUrl(): string {
     return `https://wa.me/${this.whatsapp}`;
   },
+
+  // Social media URLs - only non-empty, non-# URLs will render in the UI
+  socials: {
+    facebook: process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK || "",
+    instagram: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM || "",
+    twitter: process.env.NEXT_PUBLIC_SOCIAL_TWITTER || "",
+    youtube: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE || "",
+    linkedin: process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN || "",
+    tiktok: process.env.NEXT_PUBLIC_SOCIAL_TIKTOK || "",
+  },
 };

@@ -65,7 +65,7 @@ export const manufacturers = [
       value: "gas",
     },
     {
-      title: "Electricity",
+      title: "Electric",
       value: "electricity",
     },
     {

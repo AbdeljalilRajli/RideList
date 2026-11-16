@@ -32,7 +32,7 @@ export function normalizeFuel(fuel?: string | null): string {
   if (!fuel) return "Petrol";
   const f = fuel.trim().toLowerCase();
   if (f.includes("hybrid")) return "Hybrid";
-  if (f.includes("electric") || f === "ev") return "Electric";
+  if (f.includes("electric") || f.includes("electr") || f === "ev") return "Electric";
   if (f.includes("diesel")) return "Diesel";
   if (f.includes("gas") || f.includes("petrol") || f.includes("pb") || f.includes("95") || f.includes("98")) return "Petrol";
   return f.charAt(0).toUpperCase() + f.slice(1);

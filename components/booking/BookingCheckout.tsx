@@ -14,6 +14,7 @@ import {
   LocationOption,
 } from "@/constants/booking";
 import DateRangePicker from "@/components/common/DateRangePicker";
+import { normalizeFuel, normalizeTransmission } from "@/lib/carTaxonomy";
 
 interface BookingCheckoutProps {
   car: CarProps;
@@ -633,7 +634,7 @@ export default function BookingCheckout({
                         {car.make} {car.model}
                       </h4>
                       <p className="text-xs text-[#6C757D]">
-                        {car.year} • {car.transmission === "a" ? "Automatic" : "Manual"} • {car.fuel_type}
+                        {car.year} • {normalizeTransmission(car.transmission)} • {normalizeFuel(car.fuel_type)}
                       </p>
                       <span className="inline-block mt-1 text-[11px] font-semibold text-[#5937E0]">
                         {car.km_policy || "Unlimited km"}

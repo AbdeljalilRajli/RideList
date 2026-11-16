@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getAgencyWhatsAppNumber } from "@/constants/booking";
+import { normalizeFuel, normalizeTransmission } from "@/lib/carTaxonomy";
 
 interface TrackedBooking {
   reference_code: string;
@@ -239,7 +240,7 @@ function TrackBookingContent() {
                   {booking.car_make} {booking.car_model} ({booking.car_year})
                 </h3>
                 <p className="text-xs text-[#6C757D] mt-1">
-                  {booking.car_transmission === "a" ? "Automatic" : "Manual"} • {booking.car_fuel_type} • {booking.car_km_policy || "Unlimited km"}
+                  {normalizeTransmission(booking.car_transmission)} • {normalizeFuel(booking.car_fuel_type)} • {booking.car_km_policy || "Unlimited km"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2 justify-center sm:justify-start">
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">

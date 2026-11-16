@@ -259,6 +259,12 @@ function FleetContent() {
     }
   }, [minPriceBound, maxPriceBound, visibleCars.length, searchParams]);
 
+  // Synchronize body type if URL query param changes via navigation
+  useEffect(() => {
+    const urlType = searchParams.get("type")?.toLowerCase() || "all";
+    setSelectedType((prev) => (prev !== urlType ? urlType : prev));
+  }, [searchParams]);
+
   // Debounce search input (300ms)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -481,7 +487,7 @@ function FleetContent() {
 
       // 6. Fuel Type (normalized)
       if (fuelType !== "all") {
-        if (normalizeFuel(car.fuel_type) !== fuelType) return false;
+        if (normalizeFuel(car.fuel_type) !== normalizeFuel(fuelType)) return false;
       }
 
       // 7. Price Range Filter
@@ -967,7 +973,7 @@ function FleetContent() {
             {/* Fuel Tag */}
             {fuelType !== "all" && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEDF9] text-[#5937E0] text-xs font-bold">
-                Fuel: {fuelType}
+                Fuel: {normalizeFuel(fuelType)}
                 <button
                   type="button"
                   onClick={() => {
