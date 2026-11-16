@@ -85,7 +85,7 @@ export const BOOKING_EXTRAS: ExtraOption[] = [
   {
     id: "child_seat",
     name: "Child Safety Seat",
-    description: "Certified, sanitized infant/child car safety seat",
+    description: "Child car seat",
     price: 40,
     perDay: true,
     icon: "child_care",

@@ -12,7 +12,14 @@ interface BlogPostPageProps {
   };
 }
 
+const HIDE_BLOG = true;
+
 export default function BlogPostPage({ params }: BlogPostPageProps) {
+  // Blog is temporarily hidden from visitors (returns 404); set HIDE_BLOG = false to restore
+  if (HIDE_BLOG) {
+    notFound();
+  }
+
   const routeParams = useParams();
   const slug = params?.slug || (routeParams?.slug as string);
   const article = blogArticles.find((a) => a.slug === slug);
