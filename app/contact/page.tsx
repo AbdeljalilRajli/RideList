@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Reveal from "@/components/Reveal";
-import { blogArticles } from "@/constants/blog";
 import { AGENCY_CONFIG } from "@/constants/agency";
 
 const brandLogos = [
@@ -320,67 +319,7 @@ export default function ContactPage() {
       </section>
 
       {/* =========================================================================
-          4. "Latest blog posts & news" SECTION (3 Cards Grid)
-         ========================================================================= */}
-      <section className="max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 py-16 sm:py-24">
-        <Reveal delay={0}>
-          <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-bold text-center text-black mb-12 sm:mb-16 font-['Work_Sans',sans-serif] tracking-tight">
-            Latest blog posts & news
-          </h2>
-        </Reveal>
-
-        {/* 3 Blog Cards Staggered */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
-          {blogArticles.map((article, idx) => (
-            <Reveal key={article.slug} delay={idx * 100} className="h-full">
-              <Link
-                href={`/blog/${article.slug}`}
-                className="group h-full flex flex-col justify-between bg-white rounded-[24px] border border-[#E5E7EB] p-5 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-200"
-              >
-                <div>
-                  {/* Top: Feature Image */}
-                  <div className="relative w-full aspect-[16/10] rounded-[18px] overflow-hidden mb-5 bg-[#EEEDF9]">
-                    <Image
-                      src={article.image}
-                      alt={article.title}
-                      fill
-                      unoptimized
-                      className="object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
-                    />
-                  </div>
-
-                  {/* Category & Date */}
-                  <span className="text-xs font-semibold text-[#6C757D] uppercase tracking-wider block mb-2">
-                    {article.category} / {article.date}
-                  </span>
-
-                  {/* Title */}
-                  <h3 className="text-lg sm:text-xl font-bold text-black group-hover:text-[#5937E0] transition-colors leading-snug font-['Work_Sans',sans-serif] mb-3">
-                    {article.title}
-                  </h3>
-
-                  {/* Excerpt */}
-                  <p className="text-sm text-[#6C757D] leading-relaxed line-clamp-2">
-                    {article.excerpt}
-                  </p>
-                </div>
-
-                {/* Read More Link */}
-                <div className="pt-4 mt-4 border-t border-[#E5E7EB]/60 flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5937E0] group-hover:gap-2.5 transition-all">
-                    <span>Read article</span>
-                    <span>→</span>
-                  </span>
-                  <span className="text-xs text-[#9CA3AF] font-medium">{article.readTime}</span>
-                </div>
-              </Link>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* =========================================================================
-          5. SUPPORTED AUTOMOBILE BRANDS STRIP (Exact Figma Component)
+          4. SUPPORTED AUTOMOBILE BRANDS STRIP (Exact Figma Component)
          ========================================================================= */}
       <section className="max-w-[1440px] mx-auto px-6 lg:px-16 pb-20 sm:pb-28">
         <Reveal delay={0}>

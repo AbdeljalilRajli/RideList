@@ -301,7 +301,7 @@ export default async function Image({
           }}
         >
           <div style={{ display: "flex", alignItems: "center" }}>
-            WhatsApp Instant Booking • Doorstep & Airport Delivery
+            Booking Request • Confirmation on WhatsApp
           </div>
           <div
             style={{

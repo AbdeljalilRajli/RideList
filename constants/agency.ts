@@ -4,6 +4,47 @@
  * Single source of truth for Address, Email, Phone, and WhatsApp across the app.
  */
 
+import type { Metadata } from "next";
+
+/**
+ * Single switch for search engine indexing.
+ * When false:
+ * - Every page gets robots noindex, nofollow.
+ * - Server sends X-Robots-Tag: noindex, nofollow.
+ * - robots.txt does NOT block crawling (no Disallow) so bots can process noindex.
+ * - No sitemap.xml is generated.
+ * When true:
+ * - Public pages become indexable.
+ * - Restricted pages (admin, login, signup, dashboard, profile) always stay noindex.
+ */
+export const ALLOW_INDEXING = false;
+
+export function getRobotsMetadata(isAlwaysNoIndex = false): Metadata["robots"] {
+  if (!ALLOW_INDEXING || isAlwaysNoIndex) {
+    return {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: {
+        index: false,
+        follow: false,
+        noimageindex: true,
+      },
+    };
+  }
+  return {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  };
+}
+
 export const AGENCY_CONFIG = {
   // Production site URL used for metadataBase and absolute canonical/social sharing URLs
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://ridelist.vercel.app",

@@ -16,12 +16,12 @@ const faqs: FAQItem[] = [
   {
     question: "How does it work?",
     answer:
-      "Renting with RideList is straightforward: choose your preferred vehicle category, select your pickup dates and location, complete quick digital verification, and confirm your booking. When you arrive, unlock your car with the RideList app or collect your keys directly at the counter in minutes.",
+      "Renting with RideList is straightforward: choose your preferred vehicle, select your dates and location, and submit your booking request online. Meet the agency at pickup to inspect the vehicle, collect your keys, and return the car at the agreed location.",
   },
   {
     question: "Can I rent a car without a credit card?",
     answer:
-      "Yes! We accept major debit cards for select vehicle categories, provided you present a valid government-issued driver's license and meet our security deposit verification during digital check-in.",
+      "Yes! We accept payment at vehicle handover (cash in MAD or card). Drivers must present a valid driver's license, passport or ID, and provide the required security deposit (caution) at pickup.",
   },
   {
     question: "What are the requirements for renting a car?",
@@ -34,9 +34,9 @@ const faqs: FAQItem[] = [
       "To ensure passenger safety and preserve factory warranty guidelines, towing and third-party hitch attachments are not permitted on our rental fleet. Factory-fitted bike racks can be requested in advance on select premium SUVs.",
   },
   {
-    question: "Does RideList offer coverage products for purchase with my rental?",
+    question: "How does insurance and deposit work?",
     answer:
-      "Yes, we provide three customizable protection tiers: Standard Collision Damage Waiver (CDW), Premium Zero-Deductible Coverage, and Complete Roadside & Personal Protection for absolute peace of mind throughout your journey.",
+      "Insurance and deposit terms are explained at vehicle handover.",
   },
 ];
 
@@ -66,7 +66,6 @@ const testimonials = [
 
 export default function AboutPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -132,10 +131,10 @@ export default function AboutPage() {
             {/* Feature 2 */}
             <Reveal delay={90} className="flex flex-col gap-2.5">
               <h3 className="text-xl sm:text-2xl font-semibold text-black capitalize font-['Work_Sans',sans-serif]">
-                Awesome Support
+                Dedicated Support
               </h3>
               <p className="text-[#6C757D] text-sm sm:text-base leading-relaxed">
-                Our 24/7 concierge and roadside assistance team is always one tap away, guaranteeing dependable help whenever and wherever you need it.
+                Our customer support team is available daily (10am – 10pm) via WhatsApp and phone to assist with your questions and rental needs.
               </p>
             </Reveal>
 
@@ -145,7 +144,7 @@ export default function AboutPage() {
                 Maximum Freedom
               </h3>
               <p className="text-[#6C757D] text-sm sm:text-base leading-relaxed">
-                Enjoy flexible rental durations, generous mileage allowances, and zero cancellation penalties up to 24 hours prior to pickup.
+                Enjoy flexible rental durations and generous mileage allowances. Contact us to cancel or change a booking.
               </p>
             </Reveal>
 
@@ -155,7 +154,7 @@ export default function AboutPage() {
                 Flexibility On The Go
               </h3>
               <p className="text-[#6C757D] text-sm sm:text-base leading-relaxed">
-                Effortless mobile reservations, instant digital contract signing, and keyless vehicle access designed around your busy lifestyle.
+                Book online in minutes, meet the agency at pickup for key handover, and return the car at the agreed location with total peace of mind.
               </p>
             </Reveal>
           </div>
@@ -179,56 +178,42 @@ export default function AboutPage() {
             />
             {/* Subtle gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/15 pointer-events-none" />
-
-            {/* Centered Play Button (App Amber/Yellow Accent #FFA000) */}
-            <button
-              onClick={() => setIsVideoModalOpen(true)}
-              aria-label="Play brand video"
-              className="absolute inset-0 m-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#FFA000] hover:bg-[#FF8F00] text-white flex items-center justify-center shadow-2xl shadow-[#FFA000]/40 transition-all duration-200 hover:scale-110 hover:-translate-y-0.5 active:scale-95 group/btn cursor-pointer z-10"
-            >
-              <svg
-                className="w-7 h-7 sm:w-8 sm:h-8 translate-x-0.5 fill-current transition-transform duration-300 group-hover/btn:scale-110"
-                viewBox="0 0 24 24"
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
           </div>
         </Reveal>
       </section>
 
       {/* =========================================================================
-          4. COUNTER / STATS SECTION (Figma Frame 1:10744) - Staggered
+          4. COUNTER / STATS SECTION (Figma Frame 1:10744) - Qualitative Highlights
          ========================================================================= */}
       <section className="max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 py-12 sm:py-16 border-y border-[#E5E7EB]/60">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-6 text-center">
-          {/* Stat 1 */}
-          <Reveal delay={0} className="flex flex-col items-center">
-            <span className="text-5xl sm:text-6xl lg:text-[76px] font-extrabold text-[#5937E0] tracking-tight leading-none font-['Work_Sans',sans-serif]">
-              20k+
+          {/* Highlight 1 */}
+          <Reveal delay={0} className="flex flex-col items-center p-4">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#5937E0] tracking-tight font-['Work_Sans',sans-serif]">
+              Inspected Fleet
             </span>
-            <span className="text-black text-lg sm:text-xl font-bold mt-3 font-['Work_Sans',sans-serif]">
-              Happy customers
-            </span>
-          </Reveal>
-
-          {/* Stat 2 */}
-          <Reveal delay={100} className="flex flex-col items-center">
-            <span className="text-5xl sm:text-6xl lg:text-[76px] font-extrabold text-[#5937E0] tracking-tight leading-none font-['Work_Sans',sans-serif]">
-              540+
-            </span>
-            <span className="text-black text-lg sm:text-xl font-bold mt-3 font-['Work_Sans',sans-serif]">
-              Count of cars
+            <span className="text-[#6C757D] text-sm sm:text-base font-medium mt-2 font-['Work_Sans',sans-serif]">
+              Every car verified and thoroughly prepared
             </span>
           </Reveal>
 
-          {/* Stat 3 */}
-          <Reveal delay={200} className="flex flex-col items-center">
-            <span className="text-5xl sm:text-6xl lg:text-[76px] font-extrabold text-[#5937E0] tracking-tight leading-none font-['Work_Sans',sans-serif]">
-              25+
+          {/* Highlight 2 */}
+          <Reveal delay={100} className="flex flex-col items-center p-4">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#5937E0] tracking-tight font-['Work_Sans',sans-serif]">
+              Transparent Pricing
             </span>
-            <span className="text-black text-lg sm:text-xl font-bold mt-3 font-['Work_Sans',sans-serif]">
-              Years of experience
+            <span className="text-[#6C757D] text-sm sm:text-base font-medium mt-2 font-['Work_Sans',sans-serif]">
+              Clear daily rates in MAD with no hidden surprises
+            </span>
+          </Reveal>
+
+          {/* Highlight 3 */}
+          <Reveal delay={200} className="flex flex-col items-center p-4">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#5937E0] tracking-tight font-['Work_Sans',sans-serif]">
+              Direct Support
+            </span>
+            <span className="text-[#6C757D] text-sm sm:text-base font-medium mt-2 font-['Work_Sans',sans-serif]">
+              Responsive assistance via phone and WhatsApp
             </span>
           </Reveal>
         </div>
@@ -274,7 +259,7 @@ export default function AboutPage() {
                   </svg>
                 </div>
                 <p className="text-sm sm:text-base text-black/80 font-medium leading-snug">
-                  30-point safety check and showroom detailing before every trip.
+                  Thorough inspection, cleaning, and sanitization before every handover.
                 </p>
               </Reveal>
 
@@ -286,7 +271,7 @@ export default function AboutPage() {
                   </svg>
                 </div>
                 <p className="text-sm sm:text-base text-black/80 font-medium leading-snug">
-                  Instant smartphone unlock and paperless digital check-in.
+                  Clear booking requests online, straightforward handover, and transparent terms.
                 </p>
               </Reveal>
 
@@ -298,7 +283,7 @@ export default function AboutPage() {
                   </svg>
                 </div>
                 <p className="text-sm sm:text-base text-black/80 font-medium leading-snug">
-                  Convenient airport and city-center drop-off locations worldwide.
+                  Convenient airport, train station, and city delivery locations across Morocco.
                 </p>
               </Reveal>
             </div>
@@ -563,7 +548,7 @@ export default function AboutPage() {
 
             <Reveal delay={140}>
               <p className="text-white/80 text-base sm:text-lg leading-relaxed max-w-[560px] mb-8 font-normal">
-                Our reservation specialists are on standby 24/7 to help you secure the ideal vehicle for your upcoming trip at unmatched daily and weekly rates.
+                Our reservation specialists are available daily (10am – 10pm) to help you secure the ideal vehicle for your upcoming trip at transparent rates in MAD.
               </p>
             </Reveal>
 
@@ -609,38 +594,6 @@ export default function AboutPage() {
           </Reveal>
         </div>
       </section>
-
-      {/* =========================================================================
-          VIDEO MODAL (Interactive preview for the media banner)
-         ========================================================================= */}
-      {isVideoModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
-          onClick={() => setIsVideoModalOpen(false)}
-        >
-          <div
-            className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl aspect-video"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setIsVideoModalOpen(false)}
-              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-colors"
-              aria-label="Close video"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <iframe
-              className="w-full h-full"
-              src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1"
-              title="RideList Experience"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        </div>
-      )}
     </main>
   );
 }

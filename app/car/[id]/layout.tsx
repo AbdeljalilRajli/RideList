@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCarForMetadata } from "@/lib/getCarForMetadata";
-import { AGENCY_CONFIG } from "@/constants/agency";
+import { AGENCY_CONFIG, getRobotsMetadata } from "@/constants/agency";
 import { normalizeFuel, normalizeTransmission } from "@/lib/carTaxonomy";
 
 export const revalidate = 3600; // Sensible cache: 1 hour
@@ -18,7 +18,8 @@ export async function generateMetadata({
     return {
       title: "Ridelist | Premium Car Rental in Morocco",
       description:
-        "Discover and rent the best cars across Morocco. Premium fleet, instant WhatsApp confirmation, transparent pricing, and doorstep delivery.",
+        "Discover and rent quality cars across Morocco. Verified fleet, booking request with confirmation on WhatsApp, transparent pricing, and convenient delivery.",
+      robots: getRobotsMetadata(),
       alternates: {
         canonical: `/car/${params.id}`,
       },
@@ -28,13 +29,13 @@ export async function generateMetadata({
         url: `${AGENCY_CONFIG.siteUrl}/car/${params.id}`,
         title: "Ridelist | Premium Car Rental in Morocco",
         description:
-          "Discover and rent the best cars across Morocco. Premium fleet, instant WhatsApp confirmation, transparent pricing, and doorstep delivery.",
+          "Discover and rent quality cars across Morocco. Verified fleet, booking request with confirmation on WhatsApp, transparent pricing, and convenient delivery.",
       },
       twitter: {
         card: "summary_large_image",
         title: "Ridelist | Premium Car Rental in Morocco",
         description:
-          "Discover and rent the best cars across Morocco. Premium fleet, instant WhatsApp confirmation, transparent pricing, and doorstep delivery.",
+          "Discover and rent quality cars across Morocco. Verified fleet, booking request with confirmation on WhatsApp, transparent pricing, and convenient delivery.",
       },
     };
   }
@@ -46,13 +47,14 @@ export async function generateMetadata({
   const price = car.price_per_day || (car as any).price || 500;
 
   const title = `${carName} for rent in Morocco | Ridelist`;
-  const description = `Rent the ${carName} in Morocco from ${price} DH/day. Features ${seats}, ${transmission} transmission, and ${fuel} engine. Instant booking with WhatsApp confirmation.`;
+  const description = `Rent the ${carName} in Morocco from ${price} DH/day. Features ${seats}, ${transmission} transmission, and ${fuel} engine. Booking request with confirmation on WhatsApp.`;
 
   return {
     title: {
       absolute: title,
     },
     description,
+    robots: getRobotsMetadata(),
     alternates: {
       canonical: `/car/${params.id}`,
     },

@@ -156,7 +156,7 @@ export default function Home() {
 
               <Reveal triggerOnLoad delay={120} className="w-full">
                 <p className="text-white/85 text-base sm:text-lg max-w-[480px] leading-relaxed mb-6 sm:mb-8 lg:mb-10 font-normal">
-                  Discover flexible, premium vehicle rentals at unbeatable rates. Instant 24/7 online booking, full insurance coverage, and doorstep delivery for every journey.
+                  Discover flexible, quality vehicle rentals at transparent daily rates in MAD. Submit your booking request online, enjoy verified cars, and receive direct confirmation on WhatsApp.
                 </p>
               </Reveal>
 
@@ -283,7 +283,7 @@ export default function Home() {
               </h3>
             </div>
             <p className="font-['Work_Sans',sans-serif] font-normal text-[16px] leading-[24px] text-black text-center max-w-[357px]">
-              Instant access to verified vehicles near you, anytime with easy 24/7 online booking and contactless pickup.
+              Browse verified vehicles, submit your booking request online, and meet the agency at pickup for a smooth key handover.
             </p>
           </Reveal>
 
@@ -309,7 +309,7 @@ export default function Home() {
               </h3>
             </div>
             <p className="font-['Work_Sans',sans-serif] font-normal text-[16px] leading-[24px] text-black text-center max-w-[357px]">
-              Transparent daily rates with no hidden fees, included insurance coverage, and flexible free cancellation.
+              Transparent daily rates in MAD with no hidden surprises. Contact us to cancel or change a booking.
             </p>
           </Reveal>
         </div>
@@ -362,7 +362,7 @@ export default function Home() {
                     Book Online
                   </h3>
                   <p className="text-xs sm:text-[13px] text-[#6C757D] leading-relaxed mb-3">
-                    Select your vehicle, choose flexible pickup dates, and confirm your reservation with transparent rates and zero hidden fees.
+                    Select your vehicle, choose your rental dates, and submit your booking request with transparent rates in MAD.
                   </p>
                   <Link
                     href="/fleet"
@@ -386,7 +386,7 @@ export default function Home() {
                     Pick Up & Drive
                   </h3>
                   <p className="text-xs sm:text-[13px] text-[#6C757D] leading-relaxed mb-3">
-                    Unlock your car seamlessly with contactless digital access or meet our concierge, then hit the road with 24/7 assistance.
+                    Meet the agency at pickup, complete a quick vehicle walkthrough and key handover, then hit the road with confidence.
                   </p>
                   <Link
                     href="/fleet"
@@ -410,7 +410,7 @@ export default function Home() {
                     Flexible Return
                   </h3>
                   <p className="text-xs sm:text-[13px] text-[#6C757D] leading-relaxed mb-3">
-                    Drop off your vehicle at any certified station or airport terminal with swift contactless return and automated billing.
+                    Return the car at the agreed location with a quick inspection and immediate release of your security deposit.
                   </p>
                   <Link
                     href="/fleet"
@@ -422,7 +422,7 @@ export default function Home() {
                 </div>
               </Reveal>
 
-              {/* Step 4: 24/7 Assistance */}
+              {/* Step 4: Dedicated Support */}
               <Reveal delay={340}>
                 <div>
                   <div className="w-12 h-12 rounded-2xl bg-[#EEEDF9] text-[#5937E0] flex items-center justify-center mb-4">
@@ -431,10 +431,10 @@ export default function Home() {
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold text-black mb-2 font-['Work_Sans',sans-serif]">
-                    24/7 Assistance
+                    Dedicated Support
                   </h3>
                   <p className="text-xs sm:text-[13px] text-[#6C757D] leading-relaxed mb-3">
-                    Enjoy around-the-clock emergency roadside help, trip protection, and dedicated customer support whenever you need it.
+                    Enjoy friendly customer service, trip guidance, and support during operating hours (10am – 10pm) throughout your rental.
                   </p>
                   <Link
                     href="/fleet"

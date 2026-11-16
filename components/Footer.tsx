@@ -210,7 +210,7 @@ const Footer = () => {
                 </Link>
 
                 <p className="font-['Work_Sans',sans-serif] font-normal text-[15px] sm:text-[16px] leading-[26px] text-[#6C757D]">
-                  RideList is your premier modern car rental platform, providing transparent daily rates, hand-inspected vehicles, and effortless contactless pickup for memorable road trips.
+                  RideList is your premier modern car rental platform, providing transparent daily rates in MAD, hand-inspected vehicles, and smooth in-person key handover for memorable road trips.
                 </p>
 
                 {/* Social Buttons - Only render icons with defined URLs in config */}
@@ -278,7 +278,7 @@ const Footer = () => {
                 </h4>
                 <div className="flex flex-col gap-4">
                   <p className="font-['Work_Sans',sans-serif] font-normal text-[15px] leading-[24px] text-[#6C757D]">
-                    Need assistance, custom quotes, or instant booking confirmation? Chat with our team.
+                    Need assistance, custom quotes, or confirmation on WhatsApp? Chat with our team.
                   </p>
                   <a
                     href={AGENCY_CONFIG.whatsappUrl}
