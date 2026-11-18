@@ -9,9 +9,10 @@ export const revalidate = 3600; // Sensible cache: 1 hour
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const car = await getCarForMetadata(params.id);
+  const { id } = await params;
+  const car = await getCarForMetadata(id);
 
   // Hidden or unknown cars must never leak: fall back to default site preview
   if (!car) {
@@ -21,12 +22,12 @@ export async function generateMetadata({
         "Discover and rent quality cars across Morocco. Verified fleet, booking request with confirmation on WhatsApp, transparent pricing, and convenient delivery.",
       robots: getRobotsMetadata(),
       alternates: {
-        canonical: `/car/${params.id}`,
+        canonical: `/car/${id}`,
       },
       openGraph: {
         type: "website",
         siteName: "Ridelist",
-        url: `${AGENCY_CONFIG.siteUrl}/car/${params.id}`,
+        url: `${AGENCY_CONFIG.siteUrl}/car/${id}`,
         title: "Ridelist | Premium Car Rental in Morocco",
         description:
           "Discover and rent quality cars across Morocco. Verified fleet, booking request with confirmation on WhatsApp, transparent pricing, and convenient delivery.",
@@ -56,12 +57,12 @@ export async function generateMetadata({
     description,
     robots: getRobotsMetadata(),
     alternates: {
-      canonical: `/car/${params.id}`,
+      canonical: `/car/${id}`,
     },
     openGraph: {
       type: "website",
       siteName: "Ridelist",
-      url: `${AGENCY_CONFIG.siteUrl}/car/${params.id}`,
+      url: `${AGENCY_CONFIG.siteUrl}/car/${id}`,
       title,
       description,
     },

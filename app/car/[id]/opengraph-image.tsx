@@ -54,9 +54,10 @@ function getLogoBase64(): string {
 export default async function Image({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const car = await getCarForMetadata(params.id);
+  const { id } = await params;
+  const car = await getCarForMetadata(id);
 
   // Hidden or unknown cars must never leak: fall back to default site preview
   if (!car) {

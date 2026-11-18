@@ -7,9 +7,9 @@ import { blogArticles } from "@/constants/blog";
 import Reveal from "@/components/Reveal";
 
 interface BlogPostPageProps {
-  params?: {
+  params?: Promise<{
     slug?: string;
-  };
+  }>;
 }
 
 const HIDE_BLOG = true;
@@ -21,7 +21,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
   }
 
   const routeParams = useParams();
-  const slug = params?.slug || (routeParams?.slug as string);
+  const slug = (routeParams?.slug as string) || "";
   const article = blogArticles.find((a) => a.slug === slug);
 
   if (!article) {

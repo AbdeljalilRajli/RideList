@@ -5,9 +5,10 @@ import CarDetailClient from "@/components/car/CarDetailClient";
 export default async function CarDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const car = await getCarForMetadata(params.id);
+  const { id } = await params;
+  const car = await getCarForMetadata(id);
 
   if (!car || car.status === "hidden") {
     notFound();

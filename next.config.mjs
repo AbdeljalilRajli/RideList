@@ -2,12 +2,6 @@
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   images: {
-    domains: [
-      'cdn.imagin.studio',
-      'images.unsplash.com',
-      'res.cloudinary.com',
-      'tbobbdlyuvmtbveedlmc.supabase.co',
-    ],
     remotePatterns: [
       { protocol: 'https', hostname: 'cdn.imagin.studio' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
