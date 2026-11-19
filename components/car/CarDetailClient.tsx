@@ -297,31 +297,24 @@ export default function CarDetailClient({ car }: { car: CarProps }) {
               )}
 
               {/* Car Equipment & Features Checklist */}
-              <div className="pt-6 border-t border-[#E5E7EB]">
-                <h3 className="text-base font-bold text-[#000000] mb-4">
-                  Car Equipment & Comfort
-                </h3>
+              {Array.isArray(car.equipment) && car.equipment.length > 0 && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <h3 className="text-base font-bold text-[#000000] mb-4">
+                    Car Equipment & Comfort
+                  </h3>
 
-                <div className="grid grid-cols-2 gap-3 text-xs text-[#000000]">
-                  {[
-                    "Air Conditioning",
-                    "Bluetooth & USB",
-                    "GPS Navigation",
-                    "Keyless Entry",
-                    "Cruise Control",
-                    "Parking Sensors",
-                    "Heated Seats",
-                    "Apple CarPlay / Android Auto",
-                  ].map((feature) => (
-                    <div key={feature} className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-[#5937E0] shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      <span>{feature}</span>
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-2 gap-3 text-xs text-[#000000]">
+                    {car.equipment.map((feature) => (
+                      <div key={feature} className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#5937E0] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

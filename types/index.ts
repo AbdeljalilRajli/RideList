@@ -57,6 +57,7 @@ export interface CarProps {
   units?: CarUnit[];
   available_units_count?: number;
   total_units_count?: number;
+  equipment?: string[] | null;
 }
 
 export type CarState = CarProps[] & { message?: string };

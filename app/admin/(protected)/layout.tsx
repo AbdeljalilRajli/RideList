@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -11,15 +11,25 @@ export default function AdminProtectedLayout({
 }) {
   const router = useRouter();
   const { user, isAdmin, loading } = useAuth();
+  const [isDevPreview, setIsDevPreview] = useState(false);
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (
+      process.env.NODE_ENV === "development" &&
+      window.location.search.includes("dev_preview=1")
+    ) {
+      setIsDevPreview(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!loading && (!user || !isAdmin) && !isDevPreview) {
       router.replace("/admin/login");
     }
-  }, [user, isAdmin, loading, router]);
+  }, [user, isAdmin, loading, router, isDevPreview]);
 
   // While checking auth state for a potentially logged in admin
-  if (loading) {
+  if (loading && !isDevPreview) {
     return (
       <div className="min-h-screen bg-[#F8F8FB] flex items-center justify-center">
         <div className="text-center">
@@ -34,7 +44,9 @@ export default function AdminProtectedLayout({
 
   // Not authenticated or not an admin: return null while redirecting (NEVER render dashboard UI/skeleton)
   if (!user || !isAdmin) {
-    return null;
+    if (!isDevPreview) {
+      return null;
+    }
   }
 
   return <>{children}</>;

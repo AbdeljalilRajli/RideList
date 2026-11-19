@@ -26,6 +26,21 @@ interface ImageItem {
   compressionInfo?: string;
 }
 
+export const FIXED_EQUIPMENT_OPTIONS = [
+  "Air Conditioning",
+  "Bluetooth & USB",
+  "GPS Navigation",
+  "Cruise Control",
+  "Keyless Entry",
+  "Parking Sensors",
+  "Heated Seats",
+  "Apple CarPlay / Android Auto",
+  "Reversing Camera",
+  "Sunroof",
+  "USB-C Charging",
+  "Child Seat Anchors",
+];
+
 export default function CarFormModal({
   isOpen,
   carToEdit,
@@ -62,6 +77,10 @@ export default function CarFormModal({
   const [combinationMpg, setCombinationMpg] = useState<number>(34);
   const [cylinders, setCylinders] = useState<number>(4);
   const [displacement, setDisplacement] = useState<number>(2.0);
+
+  // Equipment state
+  const [equipment, setEquipment] = useState<string[]>([]);
+  const [customEquipmentInput, setCustomEquipmentInput] = useState("");
 
   // Images state
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -136,6 +155,12 @@ export default function CarFormModal({
         setCylinders(carToEdit.cylinders || 4);
         setDisplacement(carToEdit.displacement || 2.0);
 
+        // Preload existing equipment or empty list
+        setEquipment(
+          Array.isArray(carToEdit.equipment) ? [...carToEdit.equipment] : []
+        );
+        setCustomEquipmentInput("");
+
         // Preload existing images
         const existingList: string[] = [];
         if (Array.isArray(carToEdit.images) && carToEdit.images.length > 0) {
@@ -174,6 +199,9 @@ export default function CarFormModal({
         setCylinders(4);
         setDisplacement(2.0);
         setImages([]);
+        // New cars start with an empty equipment list
+        setEquipment([]);
+        setCustomEquipmentInput("");
       }
     }
   }, [isOpen, carToEdit]);
@@ -253,6 +281,26 @@ export default function CarFormModal({
     setImages((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  // Equipment Handlers
+  const handleToggleEquipment = (item: string) => {
+    setEquipment((prev) =>
+      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+    );
+  };
+
+  const handleAddCustomEquipment = () => {
+    const trimmed = customEquipmentInput.trim();
+    if (!trimmed) return;
+    if (!equipment.some((item) => item.toLowerCase() === trimmed.toLowerCase())) {
+      setEquipment((prev) => [...prev, trimmed]);
+    }
+    setCustomEquipmentInput("");
+  };
+
+  const handleRemoveEquipment = (item: string) => {
+    setEquipment((prev) => prev.filter((i) => i !== item));
+  };
+
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,6 +348,7 @@ export default function CarFormModal({
         km_policy: kmPolicy.trim() || "Unlimited",
         status,
         images: finalImageUrls,
+        equipment,
         drive,
         city_mpg: Number(cityMpg),
         highway_mpg: Number(highwayMpg),
@@ -790,6 +839,98 @@ export default function CarFormModal({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Section 5: Equipment & Features */}
+          <div className="pt-6 border-t border-[#E5E7EB]">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-black">Equipment & Features</h3>
+                <p className="text-xs text-[#6C757D]">
+                  Select available equipment for this vehicle or add custom items.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-[#5937E0] bg-[#EEEDF9] px-2.5 py-1 rounded-full">
+                {equipment.length} selected
+              </span>
+            </div>
+
+            {/* Checkboxes for 12 fixed items */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-4 rounded-2xl bg-[#F8F8FB] border border-[#E5E7EB] mb-4">
+              {FIXED_EQUIPMENT_OPTIONS.map((item) => {
+                const isChecked = equipment.includes(item);
+                return (
+                  <label
+                    key={item}
+                    className={`flex items-center gap-2.5 p-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors border ${
+                      isChecked
+                        ? "bg-white text-[#5937E0] border-[#5937E0]/30 shadow-xs"
+                        : "text-black/80 hover:bg-white/60 border-transparent"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleToggleEquipment(item)}
+                      className="w-4 h-4 rounded text-[#5937E0] border-gray-300 focus:ring-[#5937E0] cursor-pointer accent-[#5937E0]"
+                    />
+                    <span className="truncate">{item}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* Custom item input */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Add custom item (e.g. Roof Rack, Tinted Windows)"
+                value={customEquipmentInput}
+                onChange={(e) => setCustomEquipmentInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomEquipment();
+                  }
+                }}
+                className="flex-1 h-11 px-4 rounded-xl bg-[#F8F8FB] border border-[#E5E7EB] text-sm text-black placeholder:text-gray-400 focus:outline-none focus:border-[#5937E0]"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomEquipment}
+                className="h-11 px-5 rounded-xl bg-[#EEEDF9] hover:bg-[#E0DEFA] text-[#5937E0] font-bold text-xs transition-colors shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Item</span>
+              </button>
+            </div>
+
+            {/* Badges for custom items */}
+            {equipment.filter((item) => !FIXED_EQUIPMENT_OPTIONS.includes(item)).length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap mt-3">
+                <span className="text-[11px] font-bold text-[#6C757D]">Custom features:</span>
+                {equipment
+                  .filter((item) => !FIXED_EQUIPMENT_OPTIONS.includes(item))
+                  .map((cItem) => (
+                    <span
+                      key={cItem}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5937E0]/10 text-[#5937E0] text-xs font-bold"
+                    >
+                      <span>{cItem}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEquipment(cItem)}
+                        className="hover:text-red-600 transition-colors cursor-pointer text-sm font-bold ml-0.5"
+                        title="Remove item"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Form Actions Footer */}
